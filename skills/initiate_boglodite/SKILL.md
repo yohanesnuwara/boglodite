@@ -13,7 +13,7 @@ mkdir sandbox
 mkdir tools
 ```
 
-Inside the `data` directory, download the preloaded F3 seismic dataset:
+Inside the `data` directory, download the preloaded F3 seismic dataset (1.2 GB):
 
 ```bash
 gdown --folder "https://drive.google.com/drive/folders/0B7brcf-eGK8CbGhBdmZoUnhiTWs?resourcekey=0-0ZhV_OJ3TKN1ShFAGcrOzQ" -O ./data/
