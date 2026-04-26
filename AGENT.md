@@ -17,3 +17,7 @@ Put any data for sandboxing in `/data` folder inside the repo root directory.
 
 If you need to write a code in a sandbo, put in `/sandbox` folder inside the repo root directory.
 Use  `uv run python`.
+
+## Outputs
+
+Put any output files (plots, saved models, numpy arrays, CSVs, etc.) in the `/outputs` folder inside the repo root directory.

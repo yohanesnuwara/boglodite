@@ -331,3 +331,67 @@ Pre-annotated training `.pts` files and pre-trained `.h5` models for steep dip a
 ## Bottom Line
 
 MalenoV is a **self-contained Python script** that wires together `segyio` SEGY I/O, numpy voxelet extraction, a 5-layer 3D CNN in Keras, and matplotlib visualisation into a single end-to-end seismic facies classification pipeline. The `master()` function is the single entry point; all other functions are helpers it calls. The codebase targets the TF1/Keras 2.2 era and will require minor API updates to run on modern environments. The data augmentation subsystem is present but non-functional. The tool is well-commented and readable but monolithic.
+
+---
+
+## Running Train & Predict in the Sandbox
+
+A TF2-compatible sandbox script has been prepared at:
+
+```
+/workspace/boglodite/sandbox/train_predict_f3.py
+```
+
+This script trains a **9-class facies model** from pre-annotated `.pts` files and predicts inline 130 of the Dutch F3 dataset.
+
+### Prerequisites
+
+Dependencies are managed with `uv`. Install once:
+
+```bash
+cd /workspace/boglodite
+uv sync
+```
+
+### Run
+
+```bash
+cd /workspace/boglodite
+uv run python sandbox/train_predict_f3.py
+```
+
+### What it does
+
+1. Loads the Dutch F3 SEGY from `data/Dutch Government_F3_entire_8bit seismic.segy`
+2. Loads 9 annotated `.pts` files from `tools/facies_net/class_addresses/`
+3. Splits train/val by **time blocks per class** (avoids voxelet leakage, ensures all 9 classes appear in validation)
+4. Trains a 4-layer 3D CNN (61×61×61 voxelets) up to 15 epochs with early stopping on `val_loss`
+5. Predicts **inline 130** across the full valid xline/time range
+6. Saves results to `outputs/`:
+
+| File | Description |
+|---|---|
+| `F3_multiclass_model.h5` | Trained Keras model (9 classes) |
+| `F3_multi_prob.npy` | Softmax probabilities, shape `(1, 891, 402, 9)` |
+| `F3_multi_class.npy` | Integer class labels, shape `(1, 891, 402)` |
+| `F3_multi_inline.png` | 3-panel plot: seismic amplitude / class map / confidence |
+
+### Facies classes
+
+| Index | Name |
+|---|---|
+| 0 | Else |
+| 1 | Grizzly |
+| 2 | High Amplitude Continuous |
+| 3 | High Amplitude |
+| 4 | Low Amplitude Dips |
+| 5 | Low Amplitude |
+| 6 | Low Coherency |
+| 7 | Salt |
+| 8 | Steep Dips |
+
+### Notes
+
+- **First run** takes ~30 minutes for GPU PTX JIT compilation (RTX 5090, compute capability 12.0a not natively supported by TF 2.21). Subsequent runs are fast.
+- Uses `tf_keras` (legacy Keras 2 API) — do **not** mix with `tf.keras`.
+- The pre-trained 2-class inference-only script (no training required) is at `sandbox/predict_f3.py`.
