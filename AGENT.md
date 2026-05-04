@@ -12,6 +12,7 @@ Agent has tools, which are repositories or packages that people have developed f
 ## Data
 
 Put any data for sandboxing in `/data` folder inside the repo root directory.
+If you need to download data from Google Drive, use `gdown`
 
 ## Sandboxing code
 
