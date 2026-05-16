@@ -1,5 +1,5 @@
 ---
-name: create-doc
+name: add-geo-tool
 description: "Use when you need to analyze a GitHub repository from its GitHub URL, clone it into tools/, summarize its purpose, inspect it meticulously script by script and function by function, explain how it works and how to run it, then create a new skills/<repo>/SKILL.md containing that repository-specific analysis. Typical use: /create-doc {github-url}."
 ---
 

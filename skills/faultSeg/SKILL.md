@@ -360,7 +360,25 @@ jupyter notebook predNew.ipynb
 
 This loads the pre-trained model, runs inference on validation and F3 field data, and displays results inline. The F3 fault probability cube is also saved to disk as `fp.dat`.
 
-### 5. Apply to custom field data
+### 5. Run fault prediction on Dutch F3 (boglodite sandbox script)
+
+This script runs FaultSeg on inline 130 of the Dutch F3 dataset using the pre-trained model, and saves a fault-probability overlay plot.
+
+**Prerequisites:**
+- F3 SEGY at `data/Dutch Government_F3_entire_8bit seismic.segy`
+- Pre-trained model at `/data/faultSeg_model/model/fseg-60.hdf5`
+
+```bash
+uv run python sandbox/train_predict_seismic_fault.py
+```
+
+**Outputs** (written to `outputs/`):
+- `F3_fault_inline130.npy` — fault probability slice (samples × xlines)
+- `F3_fault_inline130.png` — seismic amplitude + fault probability overlay plot
+
+---
+
+### 6. Apply to custom field data
 
 Adapt `goF3Test()` in `apply.py` or add a new cell in `predNew.ipynb`:
 1. Load your seismic cube as `float32`, shape `(n3, n2, n1)`.

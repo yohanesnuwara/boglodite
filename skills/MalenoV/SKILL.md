@@ -339,7 +339,7 @@ MalenoV is a **self-contained Python script** that wires together `segyio` SEGY 
 A TF2-compatible sandbox script has been prepared at:
 
 ```
-/workspace/boglodite/sandbox/train_predict_f3.py
+/workspace/boglodite/sandbox/train_predict_seismic_facies.py
 ```
 
 This script trains a **9-class facies model** from pre-annotated `.pts` files and predicts inline 130 of the Dutch F3 dataset.
@@ -357,7 +357,7 @@ uv sync
 
 ```bash
 cd /workspace/boglodite
-uv run python sandbox/train_predict_f3.py
+uv run python sandbox/train_predict_seismic_facies.py
 ```
 
 ### What it does
