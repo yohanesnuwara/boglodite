@@ -10,11 +10,65 @@ See existing tools in the gallery below. You can also add your tool to Boglodite
 
 ## Work with your favorite CLI
 
+Instruction coming soon
+
 ### Copilot CLI
+
+```mermaid
+flowchart TD
+    User([User])
+
+    subgraph CLI["Copilot CLI"]
+        Copilot["GitHub Copilot Agent"]
+        Instructions[".github/copilot-instructions.md - Agent System Prompt (orchestrates everything)"]
+    end
+
+    Instructions -. governs .-> Copilot
+    User -->|"interacts via chat"| Copilot
+    Copilot -->|"/skill"| Loader{{Skill Loader}}
+
+    subgraph Skills["Prebuilt Skills Registry"]
+        direction LR
+        Init["initiate_boglodite"]
+        AddTool["add_geo_tool"]
+        Malenov["malenov"]
+        FaciesNet["faciest_net"]
+        FaultSeg["faultseg"]
+    end
+
+    Loader -->|"loads"| Skills
+
+    Init -->|"/initiate_boglodite"| Setup
+    subgraph Setup["Repository Setup"]
+        direction TB
+        Dirs["Create directory structure"]
+        F3[("Download F3 seismic data from Google Drive")]
+    end
+
+    AddTool -->|"/add_geo_tool"| Libs["Register user's favorite Python geoscience libraries"]
+
+    Malenov -->|"/malenov"| MalOut["Seismic facies segmentation"]
+    FaciesNet -->|"/faciest_net"| FNOut["Facies classification (network model)"]
+    FaultSeg -->|"/faultseg"| FaultOut["Fault extraction / segmentation"]
+
+    classDef core fill:#1e3a5f,stroke:#4a90d9,color:#fff,stroke-width:2px;
+    classDef skill fill:#2d4a2b,stroke:#6ab04c,color:#fff;
+    classDef action fill:#3d2d52,stroke:#9b59b6,color:#fff;
+    classDef data fill:#d9d9d9,stroke:#999999,color:#000;
+
+    class Copilot,Instructions,Loader core;
+    class Init,AddTool,Malenov,FaciesNet,FaultSeg skill;
+    class Dirs,Libs,MalOut,FNOut,FaultOut action;
+    class F3 data;
+```
 
 ### Claude Code
 
+Support coming soon
+
 ### Opencode
+
+Support coming soon
 
 ## Gallery
 
