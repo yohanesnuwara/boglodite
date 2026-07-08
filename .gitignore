@@ -1,3 +1,4 @@
 tools/*
 data/*
 outputs/*
+sandbox/__pycache__/*
