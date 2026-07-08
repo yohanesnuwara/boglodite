@@ -56,6 +56,7 @@ tools/<repo-name>/   # cloned 3rd-party geoscience repositories (git clone targe
 skills/<repo-name>/  # SKILL.md documentation for each tool (used by Copilot as skills)
 sandbox/             # experimental and one-off scripts
 data/                # seismic input data (SEGY, .dat, etc.) — large files, not committed
+models/              # trained model weights (.h5) reused across prediction runs
 outputs/             # all generated files: plots, .npy arrays, saved models, CSVs
 ```
 
@@ -126,6 +127,6 @@ Pre-trained FaultSeg weights live at `/data/faultSeg_model/model/` (downloaded s
 ## F3 Dataset
 
 The Dutch Government F3 seismic volume is the primary test dataset:
-- Path: `data/Dutch Government_F3_entire_8bit seismic.segy`
+- Path: `data/Dutch F3 seismic data/Dutch Government_F3_entire_8bit seismic.segy`
 - Inlines 100–750, xlines 300–1250, 462 time samples (4–1848 ms, step 4 ms)
 - Download: `uv run gdown --folder "https://drive.google.com/drive/folders/0B7brcf-eGK8CbGhBdmZoUnhiTWs?resourcekey=0-0ZhV_OJ3TKN1ShFAGcrOzQ" -O ./data/`

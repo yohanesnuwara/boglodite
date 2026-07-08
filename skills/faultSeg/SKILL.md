@@ -369,7 +369,7 @@ This script runs FaultSeg on inline 130 of the Dutch F3 dataset using the pre-tr
 - Pre-trained model at `/data/faultSeg_model/model/fseg-60.hdf5`
 
 ```bash
-uv run python sandbox/train_predict_seismic_fault.py
+uv run python sandbox/FaultSeg/train_predict_seismic_fault.py
 ```
 
 **Outputs** (written to `outputs/`):

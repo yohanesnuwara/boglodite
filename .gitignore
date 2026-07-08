@@ -1,4 +1,5 @@
 tools/*
 data/*
 outputs/*
-sandbox/__pycache__/*
+models/*
+sandbox/MalenoV/__pycache__/*
