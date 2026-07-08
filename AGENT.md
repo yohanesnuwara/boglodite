@@ -119,7 +119,7 @@ uv run gdown --folder '<drive-folder-url>' -O ./data/
 | `add-geo-tool` | — | Clone a GitHub repo and generate its `SKILL.md` |
 | `initiate-boglodite` | — | Bootstrap the repo structure and download F3 dataset |
 
-Pre-trained FaultSeg weights live at `/data/faultSeg_model/model/` (downloaded separately via gdown from the Drive folder documented in `skills/faultSeg/SKILL.md`).
+Pre-trained FaultSeg weights live at `models/faultSeg_model/model/` (downloaded separately via gdown from the Drive folder documented in `skills/faultSeg/SKILL.md`).
 
 ---
 

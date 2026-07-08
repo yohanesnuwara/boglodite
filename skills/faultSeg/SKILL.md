@@ -305,13 +305,13 @@ python apply.py   (or predNew.ipynb)
 uv add gdown   # or: pip install gdown
 
 # Create the target directory first
-mkdir -p /data/faultSeg_model
+mkdir -p models/faultSeg_model
 
 # Download all model files
-uv run gdown --folder 'https://drive.google.com/drive/folders/1q8sAoLJgbhYHRubzyqMi9KkTeZWXWtNd' -O /data/faultSeg_model/
+uv run gdown --folder 'https://drive.google.com/drive/folders/1q8sAoLJgbhYHRubzyqMi9KkTeZWXWtNd' -O models/faultSeg_model/
 ```
 
-Files will be placed under `/data/faultSeg_model/model/` (gdown creates a `model/` subdirectory matching the folder name on Drive).
+Files will be placed under `models/faultSeg_model/model/` (gdown creates a `model/` subdirectory matching the folder name on Drive).
 
 gdown will create a `model/` subdirectory inside the target and download these files:
 
@@ -366,7 +366,7 @@ This script runs FaultSeg on inline 130 of the Dutch F3 dataset using the pre-tr
 
 **Prerequisites:**
 - F3 SEGY at `data/Dutch Government_F3_entire_8bit seismic.segy`
-- Pre-trained model at `/data/faultSeg_model/model/fseg-60.hdf5`
+- Pre-trained model at `models/faultSeg_model/model/fseg-60.hdf5`
 
 ```bash
 uv run python sandbox/FaultSeg/train_predict_seismic_fault.py
