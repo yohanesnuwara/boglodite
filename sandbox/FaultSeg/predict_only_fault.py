@@ -28,7 +28,7 @@ Outputs (written to outputs/):
 import math
 import os
 
-import numpy as np
+import sys, os, numpy as np
 import segyio
 
 import matplotlib
@@ -47,7 +47,11 @@ OUT_DIR    = "/home/yohanuwa/projects/boglodite/outputs"
 
 # Section to predict, SEGY coords: [inl_min, inl_max, xl_min, xl_max, t_min, t_max]
 # Collapse one pair (min == max) to choose inline / crossline / time slice.
-SECTION_SEGY = np.array([130, 130, 300, 1250, 4, 1848])
+SECTION_SEGY = np.array([150, 150, 300, 1250, 4, 1848])
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == 'inline140':
+        SECTION_SEGY = np.array([140, 140, 300, 1250, 4, 1848])
 
 CONTEXT = 128    # context window (voxels) along the slice axis for inline/xline
 TILE    = 256    # window size along each tiled (free) horizontal axis
@@ -347,3 +351,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# --- Inline 140 (additional) ----------------------------------------------
+SECTION_SEGY2 = np.array([140, 140, 300, 1250, 4, 1848])
+if len(sys.argv) > 1:
+    if sys.argv[1] == 'inline140':
+        SECTION_SEGY = SECTION_SEGY2.copy()

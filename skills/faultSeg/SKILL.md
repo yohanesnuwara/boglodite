@@ -362,19 +362,47 @@ This loads the pre-trained model, runs inference on validation and F3 field data
 
 ### 5. Run fault prediction on Dutch F3 (boglodite sandbox script)
 
-This script runs FaultSeg on inline 130 of the Dutch F3 dataset using the pre-trained model, and saves a fault-probability overlay plot.
+The single source-of-truth predictor is
+`sandbox/FaultSeg/predict_only_fault.py`. It is **predict-only**: it loads the
+pre-trained FaultSeg 3D U-Net and segments a user-chosen section of the Dutch F3
+volume, saving a seismic + fault-probability overlay. There is no training step.
 
 **Prerequisites:**
-- F3 SEGY at `data/Dutch Government_F3_entire_8bit seismic.segy`
+- F3 SEGY at `data/Dutch F3 seismic data/Dutch Government_F3_entire_8bit seismic.segy`
 - Pre-trained model at `models/faultSeg_model/model/fseg-60.hdf5`
 
-```bash
-uv run python sandbox/FaultSeg/train_predict_seismic_fault.py
+**Select the section** by editing `SECTION_SEGY` near the top of the script
+(SEGY coordinates, mirrors the MalenoV `SECTION_SEGY` pattern):
+
+```python
+# [inl_min, inl_max, xl_min, xl_max, t_min, t_max]
+SECTION_SEGY = np.array([150, 150, 300, 1250, 4, 1848])
 ```
 
-**Outputs** (written to `outputs/`):
-- `F3_fault_inline130.npy` — fault probability slice (samples × xlines)
-- `F3_fault_inline130.png` — seismic amplitude + fault probability overlay plot
+Collapse **one** dimension (min == max) to choose the slice orientation; the
+other two axes default to the full survey extent:
+
+| Orientation | How to set | Example |
+|---|---|---|
+| Inline slice    | `inl_min == inl_max` | `[150, 150, 300, 1250, 4, 1848]` |
+| Crossline slice | `xl_min == xl_max`   | `[100, 750,  800,  800, 4, 1848]` |
+| Time slice      | `t_min == t_max`     | `[100, 750, 300, 1250, 1000, 1000]` |
+
+Then run:
+
+```bash
+uv run python sandbox/FaultSeg/predict_only_fault.py
+```
+
+**Memory-safe:** the full section is predicted by tiling the free horizontal
+axes into overlapping windows (`TILE=256`, `OVER=64`) and blending them with a
+cosine taper, so there is **no crop and no OOM**. It runs on CPU by default
+(`CUDA_VISIBLE_DEVICES=""` is set inside the script — the 6 GB laptop GPU OOMs
+on a full single-pass volume); unset that env var to use a larger GPU.
+
+**Outputs** (written to `outputs/`), tagged by orientation and section number:
+- `F3_fault_<inline|xline|timeslice>_<num>.npy` — fault probability slice
+- `F3_fault_<inline|xline|timeslice>_<num>.png` — seismic amplitude + fault probability overlay plot
 
 ---
 
