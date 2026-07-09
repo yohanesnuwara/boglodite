@@ -334,47 +334,67 @@ MalenoV is a **self-contained Python script** that wires together `segyio` SEGY 
 
 ---
 
-## Running Train & Predict in the Sandbox
+## Running Training & Prediction in the Sandbox
 
-A TF2-compatible sandbox script has been prepared at:
+TF2-compatible sandbox scripts have been prepared. Training and prediction are
+split into separate scripts sharing a common module:
 
 ```
-/workspace/boglodite/sandbox/train_predict_seismic_facies.py
+sandbox/MalenoV/facies_common.py               # shared config + helpers (edit SECTION_SEGY here)
+sandbox/MalenoV/train_seismic_facies.py        # training only -> models/F3_multiclass_model.h5
+sandbox/MalenoV/predict_only_facies_stable.py  # recommended predictor (~4x faster)
+sandbox/MalenoV/predict_only_facies_v1.py      # reference per-voxel predictor
+sandbox/MalenoV/predict_only_facies_v2.py      # vectorized predictor (comparison)
+sandbox/MalenoV/run_facies_gpu.sh              # GPU launcher (sets CUDA LD_LIBRARY_PATH)
 ```
 
-This script trains a **9-class facies model** from pre-annotated `.pts` files and predicts inline 130 of the Dutch F3 dataset.
+These train a **9-class facies model** from pre-annotated `.pts` files and
+segment a chosen inline of the Dutch F3 dataset.
 
 ### Prerequisites
 
-Dependencies are managed with `uv`. Install once:
+Dependencies are managed with `uv`. GPU support comes from `tensorflow[and-cuda]`
+(already added). Install once:
 
 ```bash
-cd /workspace/boglodite
+cd boglodite   # repo root (wherever you cloned it)
 uv sync
 ```
 
 ### Run
 
+Always launch through the GPU wrapper so the venv CUDA libraries are on
+`LD_LIBRARY_PATH`:
+
 ```bash
-cd /workspace/boglodite
-uv run python sandbox/train_predict_seismic_facies.py
+cd boglodite   # repo root (wherever you cloned it)
+
+# Predict a facies section with the recommended (stable) predictor
+bash sandbox/MalenoV/run_facies_gpu.sh                      # -> predict_only_facies_stable.py
+
+# (Re)train the model from .pts annotations
+bash sandbox/MalenoV/run_facies_gpu.sh train_seismic_facies.py
 ```
+
+To segment a different inline, edit `SECTION_SEGY` in `sandbox/MalenoV/facies_common.py`
+(e.g. `np.array([140, 140, 330, 1220, 124, 1728])`), then rerun the predictor —
+no retraining needed, the model is reused from `models/F3_multiclass_model.h5`.
 
 ### What it does
 
-1. Loads the Dutch F3 SEGY from `data/Dutch Government_F3_entire_8bit seismic.segy`
+1. Loads the Dutch F3 SEGY from `data/Dutch F3 seismic data/Dutch Government_F3_entire_8bit seismic.segy`
 2. Loads 9 annotated `.pts` files from `tools/facies_net/class_addresses/`
-3. Splits train/val by **time blocks per class** (avoids voxelet leakage, ensures all 9 classes appear in validation)
-4. Trains a 4-layer 3D CNN (61×61×61 voxelets) up to 15 epochs with early stopping on `val_loss`
-5. Predicts **inline 130** across the full valid xline/time range
-6. Saves results to `outputs/`:
+3. (train) Splits train/val by **time blocks per class** (avoids voxelet leakage, ensures all 9 classes appear in validation)
+4. (train) Trains a 4-layer 3D CNN (61×61×61 voxelets) up to 15 epochs with early stopping on `val_loss`, saving to `models/F3_multiclass_model.h5`
+5. (predict) Segments the inline set by `SECTION_SEGY` across the full valid xline/time range
+6. Saves results to `outputs/`, tagged by inline number `<inl>`:
 
 | File | Description |
 |---|---|
-| `F3_multiclass_model.h5` | Trained Keras model (9 classes) |
-| `F3_multi_prob.npy` | Softmax probabilities, shape `(1, 891, 402, 9)` |
-| `F3_multi_class.npy` | Integer class labels, shape `(1, 891, 402)` |
-| `F3_multi_inline.png` | 3-panel plot: seismic amplitude / class map / confidence |
+| `models/F3_multiclass_model.h5` | Trained Keras model (9 classes) |
+| `F3_multi_prob_<inl>.npy` | Softmax probabilities, shape `(1, 891, 402, 9)` |
+| `F3_multi_class_<inl>.npy` | Integer class labels, shape `(1, 891, 402)` |
+| `F3_multi_inline_<inl>.png` | 3-panel plot: seismic amplitude / class map / confidence |
 
 ### Facies classes
 
@@ -392,6 +412,6 @@ uv run python sandbox/train_predict_seismic_facies.py
 
 ### Notes
 
-- **First run** takes ~30 minutes for GPU PTX JIT compilation (RTX 5090, compute capability 12.0a not natively supported by TF 2.21). Subsequent runs are fast.
+- The GPU (compute capability 12.0a) is not natively supported by TF 2.21, so the **first run** JIT-compiles kernels from PTX (can be slow); subsequent runs are fast.
+- The **stable** predictor runs on a stride-2 subsampled grid and interpolates back to full resolution (~4x faster, output ~identical), because inference on this small GPU — not CPU voxel slicing — is the bottleneck.
 - Uses `tf_keras` (legacy Keras 2 API) — do **not** mix with `tf.keras`.
-- The pre-trained 2-class inference-only script (no training required) is at `sandbox/predict_f3.py`.

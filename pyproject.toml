@@ -3,10 +3,10 @@ name = "boglodite"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "gdown>=6.0.0",
-    "tensorflow>=2.21.0",
+    "tensorflow[and-cuda]>=2.21.0",
     "tf-keras>=2.21.0",
     "segyio>=1.9.0",
     "numpy>=1.26.0",
