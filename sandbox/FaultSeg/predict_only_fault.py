@@ -17,10 +17,17 @@ Collapse ONE dimension (min == max) to pick the slice orientation:
 The other two dimensions default to the full survey extent if left wide.
 
 Memory-safe: predicts the full section by tiling the free horizontal axes into
-overlapping windows and blending them with a cosine taper, so there is no OOM
-and no crop. Uses the GPU by default (with memory growth enabled to avoid
-upfront full-VRAM allocation); falls back to CPU automatically if no GPU is
-visible.
+overlapping windows and blending them with a cosine taper, so there is no crop.
+Uses the GPU by default (with memory growth enabled to avoid upfront
+full-VRAM allocation); falls back to CPU automatically if no GPU is visible.
+
+If you hit a GPU OOM (e.g. laptop GPUs with ~6 GB dedicated VRAM — measured
+peak usage here is ~16.9 GB VRAM for a full inline with TILE=256/CONTEXT=128),
+force CPU execution instead:
+
+    CUDA_VISIBLE_DEVICES="" uv run python sandbox/FaultSeg/predict_only_fault.py 140
+
+or shrink TILE/CONTEXT below to reduce the per-tile memory footprint.
 
 Outputs (written to outputs/):
     F3_fault_<orient>_<num>.npy   -- fault probability slice

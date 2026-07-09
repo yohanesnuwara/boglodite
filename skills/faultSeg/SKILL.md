@@ -388,17 +388,36 @@ other two axes default to the full survey extent:
 | Crossline slice | `xl_min == xl_max`   | `[100, 750,  800,  800, 4, 1848]` |
 | Time slice      | `t_min == t_max`     | `[100, 750, 300, 1250, 1000, 1000]` |
 
-Then run:
+Then run (optionally passing an inline number as the first CLI arg to override
+`SECTION_SEGY` with a full inline slice, e.g. `140`):
 
 ```bash
-uv run python sandbox/FaultSeg/predict_only_fault.py
+uv run python sandbox/FaultSeg/predict_only_fault.py 140
 ```
 
 **Memory-safe:** the full section is predicted by tiling the free horizontal
 axes into overlapping windows (`TILE=256`, `OVER=64`) and blending them with a
-cosine taper, so there is **no crop and no OOM**. It runs on CPU by default
-(`CUDA_VISIBLE_DEVICES=""` is set inside the script — the 6 GB laptop GPU OOMs
-on a full single-pass volume); unset that env var to use a larger GPU.
+cosine taper, so there is **no crop**. The script uses the GPU by default (with
+`set_memory_growth` enabled to avoid upfront full-VRAM allocation) and falls
+back to CPU automatically if no GPU is visible.
+
+**If you hit a GPU out-of-memory (OOM) error** — e.g. on a laptop GPU with only
+~6 GB dedicated VRAM (even with 17+ GB of shared/system memory, TF only sees
+the dedicated pool) — force CPU execution by prefixing the command:
+
+```bash
+CUDA_VISIBLE_DEVICES="" uv run python sandbox/FaultSeg/predict_only_fault.py 140
+```
+
+This hides the GPU from TensorFlow entirely, so inference runs on CPU (slower,
+but always memory-safe since the volume is loaded in tiled chunks). You can
+also reduce `TILE`/`CONTEXT` in the script to lower the per-tile memory
+footprint if you want to keep using the GPU.
+
+Measured peak usage for a full inline (`TILE=256`, `CONTEXT=128`) on an RTX
+4000 Ada (20 GB): **~16.9 GB VRAM**, ~2.3 GB CPU RSS. This is comfortable on a
+20 GB card but will likely OOM on a 6 GB laptop GPU — use the CPU fallback
+above or shrink `TILE`/`CONTEXT` in that case.
 
 **Outputs** (written to `outputs/`), tagged by orientation and section number:
 - `F3_fault_<inline|xline|timeslice>_<num>.npy` — fault probability slice
