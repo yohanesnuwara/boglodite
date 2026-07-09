@@ -6,7 +6,7 @@ Boglodite is an agent for subsurface and geoscience. There are 100+ open source 
 
 See existing tools in the gallery below. You can also add your tool to Boglodite. 
 
-![malenov-og-faultseg](/assets/F3_fault_vs_facies_inline130.png)
+<img width="1500" height="400" alt="Image" src="./assets/malenov.png" />
 
 ## Work with your favorite CLI
 
