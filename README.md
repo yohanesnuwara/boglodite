@@ -8,6 +8,43 @@ See existing tools in the gallery below. You can also add your tool to Boglodite
 
 <img width="1500" height="400" alt="Image" src="./assets/malenov.png" />
 
+## HITL Console
+
+Boglodite ships with a human-in-the-loop web console that wraps the Copilot CLI agent: chat with the agent, watch it work in the live process log, browse the input seismic volume (inline / crossline / time slice), and review results from `outputs/` — all in one screen.
+
+```bash
+uv sync            # once, installs the console dependencies
+uv run boglodite   # opens http://127.0.0.1:8265 in your browser
+```
+
+To expose the `boglodite` command globally (so typing `boglodite` anywhere in the repo works without `uv run`):
+
+```bash
+uv tool install --editable .
+```
+
+The console keeps the existing Copilot CLI architecture untouched — each chat turn is one non-interactive run:
+
+```
+copilot -p "<prompt>" --session-id <uuid> --allow-all-tools --output-format json --no-ask-user
+```
+
+A fixed `--session-id` gives multi-turn memory across the whole conversation; `--output-format json` streams tool calls and messages into the chat and log panels; `.github/copilot-instructions.md`, `skills/`, and the BYOK env vars from `set-copilot-env.sh` (`COPILOT_PROVIDER_BASE_URL`, `COPILOT_MODEL` for LM Studio) all apply unchanged. If a BYOK provider is configured, the model picker in the top bar lists the models it serves (`/v1/models`) and passes your choice via `--model`; the skills picker injects selected `skills/*/SKILL.md` paths into the prompt.
+
+```mermaid
+flowchart LR
+    Browser["Console UI (chat / viewer / log)"] -- WebSocket + REST --> Server["FastAPI server (boglodite_ui)"]
+    Server -- "spawn per turn:<br/>copilot -p ... --session-id ... --output-format json" --> Copilot["Copilot CLI agent"]
+    Copilot -- "JSONL events" --> Server
+    Server -- segyio --> SEGY[("data/*.segy")]
+    Copilot -- "runs skills & sandbox scripts" --> Outputs[("outputs/")]
+    Outputs -- "rendered (.png / .npy)" --> Server
+```
+
+Options: `boglodite --port 8265 --segy data/my_volume.segy --copilot-bin /path/to/copilot --no-browser`. Env equivalents: `BOGLODITE_PORT`, `BOGLODITE_SEGY`, `BOGLODITE_COPILOT_BIN`.
+
+To stop a running turn, press **■ STOP** (terminates the copilot subprocess); **new** starts a fresh session (clears agent context).
+
 ## Work with your favorite CLI
 
 Instruction coming soon

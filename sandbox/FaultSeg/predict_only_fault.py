@@ -263,8 +263,7 @@ def plot_section(seis, fault, orient, num, axes_meaning, specs,
     fig, ax = plt.subplots(figsize=(18, 7))
     label = {"inline": "Inline", "xline": "Crossline",
              "timeslice": "Time slice (ms)"}[orient]
-    fig.suptitle(f"FaultSeg (Wu et al., 2019) — Dutch F3  |  {label} {num}",
-                 fontsize=14)
+    fig.suptitle("F3 Seismic - Fault Map", fontsize=14)
 
     if orient in ("inline", "xline"):
         free = seis.shape[1]

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boglodite Console</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="polarity"><i class="pk"></i><i class="tr"></i></span>
+    <span class="brand-name">BOGLODITE</span>
+    <span class="brand-sub">seismic agent console</span>
+  </div>
+  <div class="topbar-controls">
+    <label class="ctl">
+      <span class="ctl-label">MODEL</span>
+      <select id="modelSelect"><option value="">provider default</option></select>
+    </label>
+    <label class="ctl">
+      <span class="ctl-label">SKILLS</span>
+      <button id="skillsBtn" class="ghost-btn">none loaded ▾</button>
+    </label>
+    <span class="ctl">
+      <span class="ctl-label">SESSION</span>
+      <code id="sessionId">—</code>
+      <button id="newSessionBtn" class="ghost-btn" title="Start a fresh Copilot session">new</button>
+    </span>
+    <span id="agentState" class="state idle">IDLE</span>
+    <button id="stopBtn" class="stop-btn" disabled>■ STOP</button>
+  </div>
+</header>
+
+<div id="skillsMenu" class="menu hidden"></div>
+
+<main id="layout">
+
+  <!-- ── viewer ─────────────────────────────────────────────── -->
+  <section id="viewer">
+    <div class="pane" id="paneInput">
+      <div class="pane-head">
+        <span class="eyebrow">INPUT <em id="inputTag">//</em></span>
+        <div class="pane-controls">
+          <select id="axisSelect">
+            <option value="inline">Inline</option>
+            <option value="xline">Crossline</option>
+            <option value="time">Time slice</option>
+          </select>
+          <button class="ghost-btn nav" id="sliceMinus">−</button>
+          <input id="sliceValue" type="number" value="130">
+          <button class="ghost-btn nav" id="slicePlus">+</button>
+          <button id="loadSlice" class="amber-btn">Load</button>
+        </div>
+      </div>
+      <div class="pane-body" id="inputBody">
+        <div class="placeholder" id="inputPlaceholder">Loading survey…</div>
+        <img id="inputImg" class="hidden" alt="Seismic slice">
+      </div>
+    </div>
+
+    <div id="divider" title="Drag to resize"></div>
+
+    <div class="pane" id="paneResult">
+      <div class="pane-head">
+        <span class="eyebrow">RESULT <em id="resultTag">// outputs/</em></span>
+        <div class="pane-controls">
+          <select id="outputSelect"><option value="">— no outputs yet —</option></select>
+          <button id="refreshOutputs" class="ghost-btn" title="Rescan outputs/">↻</button>
+        </div>
+      </div>
+      <div class="pane-body" id="resultBody">
+        <div class="placeholder" id="resultPlaceholder">
+          Results the agent writes to <code>outputs/</code> appear here.
+        </div>
+        <img id="resultImg" class="hidden" alt="Agent result">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── chat + log ─────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <div id="chatPane">
+      <div class="pane-head"><span class="eyebrow">AGENT CHAT</span></div>
+      <div id="chatScroll">
+        <div class="msg agent">
+          <div class="msg-body">Ready. Ask me to run a skill, e.g.
+            <span class="hint" data-fill="Use the faultSeg skill to extract faults on inline 150 of the F3 volume, and save the overlay to outputs/.">“extract faults on inline 150”</span> or
+            <span class="hint" data-fill="Use the MalenoV skill to segment facies on inline 130 of the F3 volume with the pretrained model, saving results to outputs/.">“segment facies on inline 130”</span>.
+          </div>
+        </div>
+      </div>
+      <div id="composer">
+        <textarea id="chatInput" rows="2"
+          placeholder="Tell the agent what to do… (Enter to send, Shift+Enter for newline)"></textarea>
+        <button id="sendBtn" class="amber-btn">Send</button>
+      </div>
+    </div>
+
+    <div id="logDivider" title="Drag to resize log"></div>
+
+    <div id="logPane">
+      <div class="pane-head">
+        <span class="eyebrow">PROCESS LOG</span>
+        <div class="pane-controls">
+          <label class="mini"><input type="checkbox" id="autoScroll" checked> follow</label>
+          <button id="clearLog" class="ghost-btn">clear</button>
+        </div>
+      </div>
+      <pre id="logScroll"></pre>
+    </div>
+  </aside>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
