@@ -18,7 +18,9 @@ The other two dimensions default to the full survey extent if left wide.
 
 Memory-safe: predicts the full section by tiling the free horizontal axes into
 overlapping windows and blending them with a cosine taper, so there is no OOM
-and no crop. Runs on CPU by default (set CUDA_VISIBLE_DEVICES to use a GPU).
+and no crop. Uses the GPU by default (with memory growth enabled to avoid
+upfront full-VRAM allocation); falls back to CPU automatically if no GPU is
+visible.
 
 Outputs (written to outputs/):
     F3_fault_<orient>_<num>.npy   -- fault probability slice
@@ -36,22 +38,33 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
-os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")   # CPU by default (avoids VRAM OOM)
 import tensorflow as tf
 import tf_keras as keras
 
+# Enable GPU memory growth to avoid upfront full-VRAM allocation and
+# fragmentation-related OOMs during tiled prediction.
+for _gpu in tf.config.list_physical_devices("GPU"):
+    try:
+        tf.config.experimental.set_memory_growth(_gpu, True)
+    except RuntimeError:
+        pass
+
 # ── Configuration ─────────────────────────────────────────────────────────────
-SEGY_PATH  = "/home/yohanuwa/projects/boglodite/data/Dutch F3 seismic data/Dutch Government_F3_entire_8bit seismic.segy"
-MODEL_PATH = "/home/yohanuwa/projects/boglodite/models/faultSeg_model/model/fseg-60.hdf5"
-OUT_DIR    = "/home/yohanuwa/projects/boglodite/outputs"
+# Repo root resolved relative to this file (sandbox/FaultSeg/predict_only_fault.py),
+# so the script works regardless of where the repo is checked out.
+REPO_ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+SEGY_PATH  = os.path.join(REPO_ROOT, "data", "Dutch F3 seismic data", "Dutch Government_F3_entire_8bit seismic.segy")
+MODEL_PATH = os.path.join(REPO_ROOT, "models", "faultSeg_model", "model", "fseg-60.hdf5")
+OUT_DIR    = os.path.join(REPO_ROOT, "outputs")
 
 # Section to predict, SEGY coords: [inl_min, inl_max, xl_min, xl_max, t_min, t_max]
 # Collapse one pair (min == max) to choose inline / crossline / time slice.
 SECTION_SEGY = np.array([150, 150, 300, 1250, 4, 1848])
 
+# Optional CLI override: `uv run python predict_only_fault.py <inline_num>`
+# selects a full inline slice at that inline number.
 if len(sys.argv) > 1:
-    if sys.argv[1] == 'inline140':
-        SECTION_SEGY = np.array([140, 140, 300, 1250, 4, 1848])
+    SECTION_SEGY = np.array([int(sys.argv[1]), int(sys.argv[1]), 300, 1250, 4, 1848])
 
 CONTEXT = 128    # context window (voxels) along the slice axis for inline/xline
 TILE    = 256    # window size along each tiled (free) horizontal axis
@@ -351,9 +364,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# --- Inline 140 (additional) ----------------------------------------------
-SECTION_SEGY2 = np.array([140, 140, 300, 1250, 4, 1848])
-if len(sys.argv) > 1:
-    if sys.argv[1] == 'inline140':
-        SECTION_SEGY = SECTION_SEGY2.copy()

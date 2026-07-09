@@ -16,7 +16,9 @@
 
 set -euo pipefail
 
-REPO="/home/yohanuwa/projects/boglodite"
+# Resolve repo root relative to this script's location
+# (sandbox/MalenoV/run_facies_gpu.sh), so it works from any checkout path.
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="${1:-predict_only_facies_stable.py}"
 
 cd "$REPO"

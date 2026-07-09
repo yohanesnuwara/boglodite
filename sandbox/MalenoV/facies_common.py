@@ -34,10 +34,14 @@ for _gpu in tf.config.list_physical_devices("GPU"):
         pass
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-SEGY_PATH   = "/home/yohanuwa/projects/boglodite/data/Dutch F3 seismic data/Dutch Government_F3_entire_8bit seismic.segy"
-PTS_DIR     = "/home/yohanuwa/projects/boglodite/tools/facies_net/class_addresses"
-OUT_DIR     = "/home/yohanuwa/projects/boglodite/outputs"
-MODELS_DIR  = "/home/yohanuwa/projects/boglodite/models"
+# Repo root resolved relative to this file (sandbox/MalenoV/facies_common.py),
+# so the scripts work regardless of where the repo is checked out.
+REPO_ROOT   = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+SEGY_PATH   = os.path.join(REPO_ROOT, "data", "Dutch F3 seismic data", "Dutch Government_F3_entire_8bit seismic.segy")
+PTS_DIR     = os.path.join(REPO_ROOT, "tools", "facies_net", "class_addresses")
+OUT_DIR     = os.path.join(REPO_ROOT, "outputs")
+MODELS_DIR  = os.path.join(REPO_ROOT, "models")
 MODEL_SAVE  = os.path.join(MODELS_DIR, "F3_multiclass_model.h5")
 
 CUBE_INCR   = 30       # voxelet half-size → 61×61×61
@@ -63,7 +67,7 @@ FACIES_NAMES = [
 NUM_CLASSES = len(FACIES_FILES)
 
 # Inline to predict: [inl_min, inl_max, xl_min, xl_max, t_min, t_max] (SEGY coords)
-SECTION_SEGY = np.array([150, 150, 330, 1220, 124, 1728])
+SECTION_SEGY = np.array([130, 130, 330, 1220, 124, 1728])
 
 os.makedirs(OUT_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)

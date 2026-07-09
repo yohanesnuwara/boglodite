@@ -357,7 +357,7 @@ Dependencies are managed with `uv`. GPU support comes from `tensorflow[and-cuda]
 (already added). Install once:
 
 ```bash
-cd /home/yohanuwa/projects/boglodite
+cd boglodite   # repo root (wherever you cloned it)
 uv sync
 ```
 
@@ -367,7 +367,7 @@ Always launch through the GPU wrapper so the venv CUDA libraries are on
 `LD_LIBRARY_PATH`:
 
 ```bash
-cd /home/yohanuwa/projects/boglodite
+cd boglodite   # repo root (wherever you cloned it)
 
 # Predict a facies section with the recommended (stable) predictor
 bash sandbox/MalenoV/run_facies_gpu.sh                      # -> predict_only_facies_stable.py
