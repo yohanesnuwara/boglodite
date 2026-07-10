@@ -17,6 +17,67 @@ const state = {
   devstamp: null,
 };
 
+/* ── minimal offline markdown renderer (agent messages) ──────
+   HTML-escapes first (XSS-safe), then supports: fenced code blocks,
+   inline code, #–#### headings, bold, italic, lists, http(s) links. */
+function escHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function mdInline(s) {
+  return s
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+function renderMarkdown(text) {
+  const src = escHtml(text);
+  const out = [];
+  const lines = src.split("\n");
+  let i = 0, list = null, para = [];
+
+  const flushPara = () => {
+    if (para.length) { out.push("<p>" + para.map(mdInline).join("<br>") + "</p>"); para = []; }
+  };
+  const flushList = () => {
+    if (list) { out.push(`<${list.tag}>` + list.items.map((x) => `<li>${mdInline(x)}</li>`).join("") + `</${list.tag}>`); list = null; }
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.startsWith("```")) {               // fenced code block
+      flushPara(); flushList();
+      const buf = []; i++;
+      while (i < lines.length && !lines[i].startsWith("```")) buf.push(lines[i++]);
+      i++;
+      out.push('<pre class="md-code">' + buf.join("\n") + "</pre>");
+      continue;
+    }
+    const h = line.match(/^(#{1,4})\s+(.*)/);
+    if (h) { flushPara(); flushList(); out.push(`<h${h[1].length + 2}>${mdInline(h[2])}</h${h[1].length + 2}>`); i++; continue; }
+    const ul = line.match(/^\s*[-*]\s+(.*)/);
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)/);
+    if (ul || ol) {
+      flushPara();
+      const tag = ul ? "ul" : "ol";
+      if (!list || list.tag !== tag) { flushList(); list = { tag, items: [] }; }
+      list.items.push((ul || ol)[1]); i++; continue;
+    }
+    if (!line.trim()) { flushPara(); flushList(); i++; continue; }
+    flushList(); para.push(line); i++;
+  }
+  flushPara(); flushList();
+  return out.join("");
+}
+
+function setAgentBody(el, rawText) {
+  el.dataset.raw = rawText;
+  el.querySelector(".msg-body").innerHTML = renderMarkdown(rawText);
+}
+
 /* ── helpers ─────────────────────────────────────────────── */
 function chatEl(cls, html) {
   const wrap = document.createElement("div");
@@ -262,17 +323,19 @@ function handleEvent(ev) {
     case "assistant": {
       if (ev.delta) {
         if (state.currentAssistant) {
-          state.currentAssistant.querySelector(".msg-body").textContent += ev.text;
+          setAgentBody(state.currentAssistant,
+                       (state.currentAssistant.dataset.raw || "") + ev.text);
         } else {
-          state.currentAssistant = chatEl("agent", ev.text);
+          state.currentAssistant = chatEl("agent", "");
+          setAgentBody(state.currentAssistant, ev.text);
         }
       } else if (state.currentAssistant) {
         // A full (non-delta) message after streaming is authoritative —
         // replace the streamed bubble rather than duplicating it.
-        state.currentAssistant.querySelector(".msg-body").textContent = ev.text;
+        setAgentBody(state.currentAssistant, ev.text);
         state.currentAssistant = null;
       } else {
-        chatEl("agent", ev.text);
+        setAgentBody(chatEl("agent", ""), ev.text);
       }
       $("chatScroll").scrollTop = $("chatScroll").scrollHeight;
       break;

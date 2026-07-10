@@ -72,6 +72,16 @@ def static_file(name: str):
     return FileResponse(path)
 
 
+@app.get("/assets/{name}")
+def asset_file(name: str):
+    """Serve files from the repo's assets/ folder (logo, images)."""
+    root = os.path.normpath(os.path.join(CONFIG.repo_root, "assets"))
+    path = os.path.normpath(os.path.join(root, name))
+    if not path.startswith(root) or not os.path.isfile(path):
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
 # ── seismic APIs ─────────────────────────────────────────────────────────────
 # ── hot reload ───────────────────────────────────────────────────────────────
 _PKG_DIR = os.path.dirname(__file__)
