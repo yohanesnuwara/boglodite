@@ -266,6 +266,10 @@ def plot_section(seis, fault, orient, num, axes_meaning, specs,
     fig.suptitle(f"FaultSeg (Wu et al., 2019) — Dutch F3  |  {label} {num}",
                  fontsize=14)
 
+    # Match the Boglodite console viewer: symmetric 98th-percentile clip on
+    # the seismic amplitude underlay (the fault overlay stays unscaled, 0–1).
+    vclip = float(np.percentile(np.abs(seis), 98)) or 1.0
+
     if orient in ("inline", "xline"):
         free = seis.shape[1]
         if ax_ == "XL":
@@ -273,14 +277,16 @@ def plot_section(seis, fault, orient, num, axes_meaning, specs,
         else:
             x0, x1 = il_coord(0), il_coord(free - 1); xlabel = "Inline"
         extent = [x0, x1, specs["t_end"], specs["t_start"]]
-        ax.imshow(seis, aspect="auto", cmap="gray", extent=extent)
+        ax.imshow(seis, aspect="auto", cmap="gray", vmin=-vclip, vmax=vclip,
+                  extent=extent)
         ax.imshow(fault_rgba(fault), aspect="auto", extent=extent)
         ax.set_xlabel(xlabel); ax.set_ylabel("Time (ms)")
     else:  # timeslice: plane (XL, IL) -> show IL on x, XL on y
         img = seis.T; fimg = fault.T           # (IL, XL)
         extent = [xl_coord(0), xl_coord(seis.shape[0] - 1),
                   il_coord(seis.shape[1] - 1), il_coord(0)]
-        ax.imshow(img, aspect="auto", cmap="gray", extent=extent)
+        ax.imshow(img, aspect="auto", cmap="gray", vmin=-vclip, vmax=vclip,
+                  extent=extent)
         ax.imshow(fault_rgba(fimg), aspect="auto", extent=extent)
         ax.set_xlabel("Xline"); ax.set_ylabel("Inline")
 

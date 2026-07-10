@@ -3,3 +3,7 @@ data/*
 outputs/*
 models/*
 sandbox/MalenoV/__pycache__/*
+
+# Python bytecode caches
+__pycache__/
+*.py[cod]

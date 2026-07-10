@@ -1,0 +1,21 @@
+# Boglodite console dark theme, injected into agent subprocesses via the
+# MATPLOTLIBRC environment variable so that plots written by sandbox scripts
+# match the console's seismic-lab palette without any script changes.
+# (Hex colors are written without '#' because '#' starts a comment in rc files.)
+
+figure.facecolor:  12181F
+figure.edgecolor:  12181F
+savefig.facecolor: 12181F
+savefig.edgecolor: 12181F
+axes.facecolor:    0B0F13
+axes.edgecolor:    3A4756
+axes.labelcolor:   D8E0E8
+axes.titlecolor:   D8E0E8
+xtick.color:       8A96A0
+ytick.color:       8A96A0
+text.color:        D8E0E8
+grid.color:        202B36
+legend.facecolor:  12181F
+legend.edgecolor:  3A4756
+font.family:       monospace
+font.size:         9

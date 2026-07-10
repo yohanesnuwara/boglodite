@@ -25,6 +25,16 @@ Use `uv run python` to execute scripts.
 
 Put any output files (plots, saved models, numpy arrays, CSVs, etc.) in the `/outputs` folder inside the repo root directory.
 
+### Long-running script logging
+
+When executing long-running scripts (training, prediction, GPU jobs), stream their output to the Boglodite console by piping through `tee`:
+
+```bash
+uv run python sandbox/FaultSeg/predict_only_fault.py 150 2>&1 | tee -a outputs/run.log
+```
+
+The console tails `outputs/run.log` live, so TensorFlow/CUDA logs and epoch progress appear in its PROCESS log panel while the script runs. Quick commands (ls, cat, grep) do not need this.
+
 ---
 
 
