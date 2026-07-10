@@ -24,7 +24,8 @@ import time
 import urllib.request
 import webbrowser
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (Body, FastAPI, HTTPException, Query, WebSocket,
+                     WebSocketDisconnect)
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from .agent import AgentSession
@@ -72,6 +73,30 @@ def static_file(name: str):
 
 
 # ── seismic APIs ─────────────────────────────────────────────────────────────
+# ── hot reload ───────────────────────────────────────────────────────────────
+_PKG_DIR = os.path.dirname(__file__)
+
+
+@app.get("/api/devstamp")
+def devstamp():
+    """Latest mtime across the UI source tree.
+
+    The frontend polls this; when the stamp changes (you edited a .py, .html,
+    .js, or .css file) the browser reloads itself. Combine with `boglodite
+    --dev` for backend auto-restart too.
+    """
+    stamp = 0.0
+    for root, _, files in os.walk(_PKG_DIR):
+        if "__pycache__" in root:
+            continue
+        for name in files:
+            try:
+                stamp = max(stamp, os.stat(os.path.join(root, name)).st_mtime)
+            except OSError:
+                pass
+    return {"stamp": stamp}
+
+
 @app.get("/api/meta")
 def meta():
     vol = get_volume()
@@ -133,7 +158,111 @@ def api_output_view(name: str):
     return FileResponse(path)
 
 
-# ── skills / models APIs ─────────────────────────────────────────────────────
+# ── local provider (Run Locally / BYOK) ─────────────────────────────────────
+_PROVIDER_VARS = ("COPILOT_PROVIDER_BASE_URL", "COPILOT_MODEL", "COPILOT_OFFLINE")
+_ENV_SH = os.path.join(CONFIG.repo_root, "set-copilot-env.sh")
+
+
+def _parse_env_sh() -> dict:
+    """Read defaults from set-copilot-env.sh (export VAR="value")."""
+    out = {}
+    if os.path.isfile(_ENV_SH):
+        try:
+            with open(_ENV_SH, encoding="utf-8") as f:
+                for m in re.finditer(r'export\s+(\w+)="?([^"\n]*)"?', f.read()):
+                    out[m.group(1)] = m.group(2)
+        except OSError:
+            pass
+    return out
+
+
+def _initial_provider() -> dict:
+    sh = _parse_env_sh()
+    base = os.environ.get("COPILOT_PROVIDER_BASE_URL") or \
+        sh.get("COPILOT_PROVIDER_BASE_URL") or "http://192.168.56.1:1234/v1"
+    model = os.environ.get("COPILOT_MODEL") or sh.get("COPILOT_MODEL") or ""
+    # ON if the launching shell already sourced the provider env.
+    return {"enabled": bool(os.environ.get("COPILOT_PROVIDER_BASE_URL")),
+            "host": "LM Studio", "base_url": base, "model": model}
+
+
+_provider = _initial_provider()
+
+
+def _apply_provider():
+    """Reflect _provider into the next copilot spawn's environment.
+
+    No restart needed: each chat turn spawns copilot with a freshly built
+    environment (agent.build_env), so changes apply on the very next turn.
+    """
+    if _provider["enabled"] and _provider["base_url"]:
+        _session.env_overrides = {
+            "COPILOT_PROVIDER_BASE_URL": _provider["base_url"],
+            "COPILOT_MODEL": _provider["model"] or "",
+            "COPILOT_OFFLINE": "true",
+        }
+        _session.env_unset = []
+    else:
+        _session.env_overrides = {}
+        _session.env_unset = list(_PROVIDER_VARS)
+
+
+def _write_env_sh():
+    """Keep set-copilot-env.sh in sync so terminal copilot use matches the UI."""
+    try:
+        with open(_ENV_SH, "w", encoding="utf-8") as f:
+            f.write(
+                "#!/usr/bin/env bash\n"
+                f'export COPILOT_PROVIDER_BASE_URL="{_provider["base_url"]}"\n'
+                f'export COPILOT_MODEL="{_provider["model"]}"\n'
+                'export COPILOT_OFFLINE="true"\n'
+                'echo "Copilot env vars loaded."\n'
+            )
+    except OSError:
+        pass
+
+
+_apply_provider()
+
+
+@app.get("/api/provider")
+def api_provider_get():
+    return dict(_provider)
+
+
+@app.get("/api/provider/models")
+def api_provider_models(base_url: str):
+    """Fetch model ids from an OpenAI-compatible endpoint (e.g. LM Studio).
+
+    Done server-side because the browser can't call LM Studio directly
+    (cross-origin, no CORS headers on local servers).
+    """
+    url = base_url.rstrip("/") + "/models"
+    try:
+        with urllib.request.urlopen(url, timeout=4) as r:
+            payload = json.load(r)
+        models = [m.get("id") for m in payload.get("data", []) if m.get("id")]
+        return {"models": models, "error": None}
+    except Exception as e:  # noqa: BLE001
+        return {"models": [], "error": f"Cannot reach {url}: {e}"}
+
+
+@app.post("/api/provider")
+def api_provider_set(payload: dict = Body(...)):
+    _provider["enabled"] = bool(payload.get("enabled"))
+    if payload.get("base_url"):
+        _provider["base_url"] = str(payload["base_url"]).strip()
+    if payload.get("model") is not None:
+        _provider["model"] = str(payload["model"]).strip()
+    if payload.get("host"):
+        _provider["host"] = str(payload["host"])
+    _apply_provider()
+    if _provider["enabled"]:
+        _write_env_sh()
+    return dict(_provider)
+
+
+
 def _parse_frontmatter(text: str) -> dict:
     m = re.match(r"^---\s*\n(.*?)\n---", text, re.S)
     out = {}
@@ -170,8 +299,12 @@ def api_skills():
 @app.get("/api/models")
 def api_models():
     """List models from the BYOK provider (e.g. LM Studio) when configured."""
-    base = os.environ.get("COPILOT_PROVIDER_BASE_URL", "").rstrip("/")
-    default = os.environ.get("COPILOT_MODEL")
+    if _provider["enabled"]:
+        base = (_provider["base_url"] or "").rstrip("/")
+        default = _provider["model"] or None
+    else:
+        base = os.environ.get("COPILOT_PROVIDER_BASE_URL", "").rstrip("/")
+        default = os.environ.get("COPILOT_MODEL")
     models: list[str] = []
     if base:
         try:
@@ -186,13 +319,22 @@ def api_models():
 
 
 # ── chat websocket ───────────────────────────────────────────────────────────
+_SKILL_PREAMBLE = ("Load and follow these skill files (relative to the repo "
+                   "root); keep them in mind for the whole session:")
+# Skill paths already injected, keyed by session id — re-sending the full
+# skill preamble every turn makes the agent re-read every SKILL.md and
+# balloons the prompt (very slow on local models), so inject once per
+# session and only re-send skills that were newly selected.
+_skills_sent: dict[str, set] = {}
+
+
 def _build_prompt(text: str, skill_paths: list[str]) -> str:
-    if not skill_paths:
+    sent = _skills_sent.setdefault(_session.session_id, set())
+    new = [p for p in skill_paths if p not in sent]
+    if not new:
         return text
-    lines = ["Before answering, load and follow these skill files "
-             "(relative to the repo root):"]
-    lines += [f"- {p}" for p in skill_paths]
-    lines += ["", "User request:", text]
+    sent.update(new)
+    lines = [_SKILL_PREAMBLE] + [f"- {p}" for p in new] + ["", "User request:", text]
     return "\n".join(lines)
 
 
@@ -203,20 +345,66 @@ async def ws_chat(ws: WebSocket):
                         "session_id": _session.session_id})
     turn_task: asyncio.Task | None = None
 
+    async def tail_run_log(stop: asyncio.Event):
+        """Stream lines appended to outputs/run.log while the agent works.
+
+        Sandbox scripts pipe long-running output through
+        `... 2>&1 | tee -a outputs/run.log` (see copilot-instructions.md),
+        which lands here live — TensorFlow GPU logs, epoch progress, etc.
+        """
+        path = os.path.join(CONFIG.outputs_dir, "run.log")
+        offset = os.path.getsize(path) if os.path.isfile(path) else 0
+        while not stop.is_set():
+            try:
+                if os.path.isfile(path):
+                    size = os.path.getsize(path)
+                    if size < offset:      # file was truncated/recreated
+                        offset = 0
+                    if size > offset:
+                        with open(path, "r", encoding="utf-8",
+                                  errors="replace") as f:
+                            f.seek(offset)
+                            chunk = f.read(size - offset)
+                            offset = size
+                        for line in chunk.splitlines():
+                            if line.strip():
+                                await ws.send_json({"type": "proc", "text": line})
+            except OSError:
+                pass
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=0.7)
+            except asyncio.TimeoutError:
+                pass
+
     async def run_turn(payload: dict):
         text = payload.get("text", "").strip()
         if not text:
             return
         _session.model = payload.get("model") or None
         prompt = _build_prompt(text, payload.get("skills") or [])
-        before = {f["name"] for f in api_outputs()["files"]}
+        # Snapshot name->mtime so overwritten files (agents often rewrite the
+        # same filename, e.g. F3_fault_inline_150.png) count as new results.
+        before = {f["name"]: f["mtime"] for f in api_outputs()["files"]}
         await ws.send_json({"type": "status", "state": "running"})
+        stop_tail = asyncio.Event()
+        tail_task = asyncio.create_task(tail_run_log(stop_tail))
         try:
             async for ev in _session.run_turn(prompt):
+                # Some CLI versions echo the submitted prompt back as a
+                # message event without a role — never show our own prompt
+                # (or the skill preamble) as an agent bubble.
+                if ev.get("type") == "assistant":
+                    t = ev.get("text", "").strip()
+                    if t == prompt.strip() or t == text.strip() or \
+                            t.startswith(_SKILL_PREAMBLE):
+                        continue
                 await ws.send_json(ev)
         finally:
-            after = api_outputs()["files"]
-            new = [f["name"] for f in after if f["name"] not in before]
+            stop_tail.set()
+            await tail_task
+            after = api_outputs()["files"]          # already newest-first
+            new = [f["name"] for f in after
+                   if f["name"] not in before or f["mtime"] > before[f["name"]]]
             await ws.send_json({"type": "outputs_changed", "new": new})
             await ws.send_json({"type": "status", "state": "idle"})
 
@@ -235,6 +423,7 @@ async def ws_chat(ws: WebSocket):
                 await ws.send_json({"type": "info", "text": "Run stopped."})
             elif mtype == "new_session":
                 await _session.stop()
+                _skills_sent.pop(_session.session_id, None)
                 _session.new_session()
                 await ws.send_json({"type": "status", "state": "idle",
                                     "session_id": _session.session_id,
@@ -270,6 +459,10 @@ def main():
     parser.add_argument("--port", type=int, default=CONFIG.port)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--dev", action="store_true",
+                        help="auto-restart the server when boglodite_ui/ "
+                             "source files change (the browser reloads "
+                             "itself in all modes)")
     parser.add_argument("--segy", help="path to SEGY volume to display")
     parser.add_argument("--copilot-bin", help="copilot executable")
     args = parser.parse_args()
@@ -277,6 +470,7 @@ def main():
     if args.segy:
         os.environ["BOGLODITE_SEGY"] = args.segy
     if args.copilot_bin:
+        os.environ["BOGLODITE_COPILOT_BIN"] = args.copilot_bin
         CONFIG.copilot_bin = args.copilot_bin
         _session.copilot_bin = args.copilot_bin
 
@@ -284,12 +478,20 @@ def main():
     _register_skills_dir()
 
     url = f"http://{args.host}:{args.port}"
-    print(f"\n  ⛰  Boglodite console → {url}\n")
+    print(f"\n  ⛰  Boglodite console → {url}"
+          + ("   [dev mode: auto-reload]" if args.dev else "") + "\n")
     if not args.no_browser:
         threading.Thread(
             target=lambda: (time.sleep(1.2), webbrowser.open(url)), daemon=True
         ).start()
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    if args.dev:
+        # Reload mode needs an import string; module state resets on reload,
+        # which is fine during development.
+        uvicorn.run("boglodite_ui.app:app", host=args.host, port=args.port,
+                    log_level="warning", reload=True,
+                    reload_dirs=[os.path.dirname(__file__)])
+    else:
+        uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":

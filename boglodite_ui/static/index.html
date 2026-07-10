@@ -15,6 +15,10 @@
     <span class="brand-sub">seismic agent console</span>
   </div>
   <div class="topbar-controls">
+    <label class="ctl" title="Run against a local model server instead of Copilot's model routing">
+      <span class="ctl-label">RUN LOCALLY</span>
+      <span class="switch"><input type="checkbox" id="localToggle"><i></i></span>
+    </label>
     <label class="ctl">
       <span class="ctl-label">MODEL</span>
       <select id="modelSelect"><option value="">provider default</option></select>
@@ -34,6 +38,37 @@
 </header>
 
 <div id="skillsMenu" class="menu hidden"></div>
+
+<div id="providerModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="eyebrow">LOCAL MODEL PROVIDER</span>
+      <button id="providerClose" class="ghost-btn">✕</button>
+    </div>
+    <label class="field">
+      <span>Hosted by</span>
+      <select id="providerHost"><option>LM Studio</option></select>
+    </label>
+    <label class="field">
+      <span>Base URL</span>
+      <input id="providerUrl" type="text" spellcheck="false"
+             placeholder="http://192.168.56.1:1234/v1">
+    </label>
+    <div class="field">
+      <span>Model</span>
+      <div class="row">
+        <select id="providerModel"><option value="">— detect first —</option></select>
+        <button id="providerDetect" class="ghost-btn">Detect models</button>
+      </div>
+      <div id="providerStatus" class="field-note"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="field-note">Applies from the next agent turn — no restart needed.
+        Also updates <code>set-copilot-env.sh</code>.</span>
+      <button id="providerSave" class="amber-btn" disabled>Use this model</button>
+    </div>
+  </div>
+</div>
 
 <main id="layout">
 
@@ -102,13 +137,17 @@
 
     <div id="logPane">
       <div class="pane-head">
-        <span class="eyebrow">PROCESS LOG</span>
+        <div class="log-tabs">
+          <button class="log-tab active" data-tab="agent">AGENT <span id="agentCount" class="count"></span></button>
+          <button class="log-tab" data-tab="proc">PROCESS <span id="procCount" class="count"></span></button>
+        </div>
         <div class="pane-controls">
           <label class="mini"><input type="checkbox" id="autoScroll" checked> follow</label>
           <button id="clearLog" class="ghost-btn">clear</button>
         </div>
       </div>
-      <pre id="logScroll"></pre>
+      <pre id="logScroll" data-active="agent"></pre>
+      <pre id="procScroll" class="hidden"></pre>
     </div>
   </aside>
 

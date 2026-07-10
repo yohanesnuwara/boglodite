@@ -11,6 +11,10 @@ const state = {
   selectedSkills: new Set(),
   currentAssistant: null, // element receiving streaming text
   outputsPoll: null,
+  toolChips: new Map(),   // tool call id -> chip element
+  lastToolChip: null,     // fallback pairing when no id
+  counts: { agent: 0, proc: 0 },
+  devstamp: null,
 };
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -21,7 +25,7 @@ function chatEl(cls, html) {
   body.className = "msg-body";
   if (typeof html === "string") body.textContent = html;
   else body.appendChild(html);
-  if (cls === "tool" || cls === "info" || cls === "err") {
+  if (cls.startsWith("tool") || cls === "info" || cls === "err" || cls === "summary") {
     wrap.innerHTML = "";
     wrap.append(...(typeof html === "string" ? [document.createTextNode(html)] : [html]));
   } else {
@@ -32,14 +36,32 @@ function chatEl(cls, html) {
   return wrap;
 }
 
-function addLog(line, cls) {
+function bumpCount(which) {
+  state.counts[which] += 1;
+  const el = which === "agent" ? $("agentCount") : $("procCount");
+  el.textContent = state.counts[which];
+  const tab = document.querySelector(`.log-tab[data-tab="${which}"]`);
+  if (!tab.classList.contains("active")) tab.classList.add("unseen");
+}
+
+function appendPre(pre, line, cls) {
   const span = document.createElement("span");
   if (cls) span.className = cls;
   span.textContent = line + "\n";
-  const log = $("logScroll");
-  log.appendChild(span);
-  while (log.childNodes.length > 4000) log.removeChild(log.firstChild);
-  if ($("autoScroll").checked) log.scrollTop = log.scrollHeight;
+  pre.appendChild(span);
+  while (pre.childNodes.length > 4000) pre.removeChild(pre.firstChild);
+  if ($("autoScroll").checked) pre.scrollTop = pre.scrollHeight;
+}
+
+function addLog(line, cls) {
+  appendPre($("logScroll"), line, cls);
+  bumpCount("agent");
+}
+
+function addProc(line) {
+  const isHead = line.startsWith("── ");
+  appendPre($("procScroll"), line, isHead ? "p-head" : "");
+  bumpCount("proc");
 }
 
 function setRunning(running) {
@@ -130,22 +152,28 @@ async function refreshOutputs(selectName) {
   const r = await fetch("/api/outputs");
   const { files } = await r.json();
   const sel = $("outputSelect");
-  const prev = selectName || sel.value;
+  const prev = selectName || (state.resultShown ? sel.value : "");
   sel.innerHTML = "";
-  if (!files.length) {
-    sel.appendChild(new Option("— no outputs yet —", ""));
-    return;
-  }
+  sel.appendChild(new Option(files.length ? "— select an output —" : "— no outputs yet —", ""));
   for (const f of files) sel.appendChild(new Option(f.name, f.name));
-  sel.value = files.some((f) => f.name === prev) ? prev : files[0].name;
+  sel.value = files.some((f) => f.name === prev) ? prev : "";
+  // Only display something if a file was explicitly requested (new output
+  // from a turn, or the user's current selection) — never on plain boot.
   if (sel.value) showOutput(sel.value);
 }
 
 async function showOutput(name) {
-  if (!name) return;
+  if (!name) {
+    state.resultShown = false;
+    $("resultImg").classList.add("hidden");
+    $("resultPlaceholder").classList.remove("hidden");
+    $("resultTag").textContent = "// outputs/";
+    return;
+  }
   $("resultTag").textContent = `// outputs/${name} — loading…`;
   try {
-    const resp = await fetch(`/api/output/view?name=${encodeURIComponent(name)}`);
+    const resp = await fetch(`/api/output/view?name=${encodeURIComponent(name)}&t=${Date.now()}`,
+                             { cache: "no-store" });
     if (!resp.ok) throw new Error(await resp.text());
     const blob = await resp.blob();
     const img = $("resultImg");
@@ -154,6 +182,7 @@ async function showOutput(name) {
     img.classList.remove("hidden");
     $("resultPlaceholder").classList.add("hidden");
     $("resultTag").textContent = `// outputs/${name}`;
+    state.resultShown = true;
   } catch (e) {
     $("resultTag").textContent = `// outputs/${name} — cannot render`;
     addLog("output render failed: " + e.message, "l-err");
@@ -174,15 +203,21 @@ async function loadSkills() {
   state.skills = (await r.json()).skills;
   const menu = $("skillsMenu");
   menu.innerHTML = "";
+  const note = document.createElement("div");
+  note.className = "sk-desc";
+  note.style.padding = "6px 8px";
+  note.textContent = "Selected skills are sent to the agent once per session.";
+  menu.appendChild(note);
   for (const sk of state.skills) {
     const label = document.createElement("label");
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = sk.path;
+    cb.checked = true;                       // all skills loaded by default
+    state.selectedSkills.add(sk.path);
     cb.addEventListener("change", () => {
       cb.checked ? state.selectedSkills.add(sk.path) : state.selectedSkills.delete(sk.path);
-      const n = state.selectedSkills.size;
-      $("skillsBtn").textContent = n ? `${n} loaded ▾` : "none loaded ▾";
+      updateSkillsBtn();
     });
     const name = document.createElement("div");
     name.className = "sk-name";
@@ -193,9 +228,15 @@ async function loadSkills() {
     label.append(cb, document.createTextNode(" "), name, desc);
     menu.appendChild(label);
   }
+  updateSkillsBtn();
   if (!state.skills.length) {
     menu.innerHTML = '<div class="sk-desc" style="padding:8px">No skills/*/SKILL.md found.</div>';
   }
+}
+
+function updateSkillsBtn() {
+  const n = state.selectedSkills.size;
+  $("skillsBtn").textContent = n ? `${n} loaded ▾` : "none loaded ▾";
 }
 
 /* ── websocket chat ──────────────────────────────────────── */
@@ -240,16 +281,47 @@ function handleEvent(ev) {
       addLog("· " + ev.text);
       break;
     case "tool": {
+      if (ev.phase === "end") {
+        // Pair with the start chip (by id, else the most recent open chip).
+        const chip = state.toolChips.get(ev.id) || state.lastToolChip;
+        if (chip && !chip.classList.contains("tool-done") && !chip.classList.contains("tool-fail")) {
+          chip.classList.add(ev.ok ? "tool-done" : "tool-fail");
+          const n = chip.querySelector(".tname");
+          if (n) n.textContent = (ev.ok ? "✔ " : "✗ ") + n.textContent.replace(/^[▸✔✗] /, "");
+          if (ev.detail) {
+            const d = chip.querySelector(".tdetail");
+            const short = ev.detail.split("\n")[0].slice(0, 120);
+            if (d && short) d.textContent = "  → " + short;
+          }
+          state.toolChips.delete(ev.id);
+          if (state.lastToolChip === chip) state.lastToolChip = null;
+          break;
+        }
+        // No start seen — fall through and render a standalone end chip.
+      }
       const frag = document.createElement("span");
       const n = document.createElement("span");
       n.className = "tname";
-      n.textContent = (ev.phase === "end" ? "✔ " : "▸ ") + ev.name;
+      n.textContent = (ev.phase === "end" ? (ev.ok ? "✔ " : "✗ ") : "▸ ") + ev.name;
       frag.appendChild(n);
-      if (ev.detail) frag.appendChild(document.createTextNode("  " + ev.detail));
-      chatEl("tool", frag);
+      const d = document.createElement("span");
+      d.className = "tdetail";
+      if (ev.detail) d.textContent = "  " + ev.detail.split("\n")[0].slice(0, 160);
+      frag.appendChild(d);
+      const chip = chatEl("tool" + (ev.phase === "end" ? (ev.ok ? " tool-done" : " tool-fail") : ""), frag);
+      if (ev.phase === "start") {
+        if (ev.id) state.toolChips.set(ev.id, chip);
+        state.lastToolChip = chip;
+      }
       state.currentAssistant = null;
       break;
     }
+    case "proc":
+      for (const line of ev.text.split("\n")) addProc(line);
+      break;
+    case "summary":
+      chatEl("summary", ev.text);
+      break;
     case "info":
       chatEl("info", ev.text);
       break;
@@ -279,6 +351,8 @@ function send() {
   if (!text || state.running || !state.ws || state.ws.readyState !== 1) return;
   chatEl("user", text);
   state.currentAssistant = null;
+  state.toolChips.clear();
+  state.lastToolChip = null;
   state.ws.send(JSON.stringify({
     type: "chat",
     text,
@@ -287,6 +361,122 @@ function send() {
   }));
   $("chatInput").value = "";
 }
+
+/* ── local provider (Run Locally) ─────────────────────────── */
+const provider = { enabled: false, host: "LM Studio", base_url: "", model: "" };
+
+async function loadProvider() {
+  Object.assign(provider, await (await fetch("/api/provider")).json());
+  $("localToggle").checked = provider.enabled;
+  $("providerUrl").value = provider.base_url;
+  if (provider.model) {
+    $("providerModel").innerHTML = "";
+    $("providerModel").appendChild(new Option(provider.model, provider.model));
+    $("providerSave").disabled = false;
+  }
+}
+
+function openProviderModal() {
+  $("providerUrl").value = provider.base_url || "http://192.168.56.1:1234/v1";
+  $("providerStatus").textContent = "";
+  $("providerStatus").className = "field-note";
+  $("providerModal").classList.remove("hidden");
+}
+
+function closeProviderModal(revertToggle) {
+  $("providerModal").classList.add("hidden");
+  if (revertToggle) $("localToggle").checked = provider.enabled;
+}
+
+async function detectModels() {
+  const base = $("providerUrl").value.trim();
+  const status = $("providerStatus");
+  status.textContent = "Detecting…";
+  status.className = "field-note";
+  const { models, error } = await (await fetch(
+    `/api/provider/models?base_url=${encodeURIComponent(base)}`)).json();
+  const sel = $("providerModel");
+  sel.innerHTML = "";
+  if (error || !models.length) {
+    sel.appendChild(new Option("— none found —", ""));
+    status.textContent = error || "The server responded but lists no models.";
+    status.className = "field-note err";
+    $("providerSave").disabled = true;
+    return;
+  }
+  for (const m of models) sel.appendChild(new Option(m, m));
+  if (models.includes(provider.model)) sel.value = provider.model;
+  status.textContent = `Found ${models.length} model(s).`;
+  status.className = "field-note ok";
+  $("providerSave").disabled = false;
+}
+
+async function saveProvider() {
+  const body = {
+    enabled: true,
+    host: $("providerHost").value,
+    base_url: $("providerUrl").value.trim(),
+    model: $("providerModel").value,
+  };
+  Object.assign(provider, await (await fetch("/api/provider", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })).json());
+  closeProviderModal(false);
+  $("localToggle").checked = true;
+  // Sync the topbar model picker with the local server's models.
+  const sel = $("modelSelect");
+  sel.innerHTML = "";
+  for (const opt of $("providerModel").options) {
+    if (opt.value) sel.appendChild(new Option(opt.value, opt.value));
+  }
+  sel.value = provider.model;
+  chatEl("info", `Running locally via ${provider.host} — ${provider.model} ` +
+    "(applies from the next turn; set-copilot-env.sh updated).");
+}
+
+async function disableProvider() {
+  Object.assign(provider, await (await fetch("/api/provider", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled: false }),
+  })).json());
+  const sel = $("modelSelect");
+  sel.innerHTML = "";
+  sel.appendChild(new Option("provider default", ""));
+  chatEl("info", "Run Locally off — using Copilot's own model routing from the next turn.");
+}
+
+$("localToggle").addEventListener("change", (e) =>
+  e.target.checked ? openProviderModal() : disableProvider());
+$("providerClose").addEventListener("click", () => closeProviderModal(true));
+$("providerModal").addEventListener("click", (e) => {
+  if (e.target === $("providerModal")) closeProviderModal(true);
+});
+$("providerDetect").addEventListener("click", detectModels);
+$("providerSave").addEventListener("click", saveProvider);
+
+/* ── log tabs ────────────────────────────────────────────── */
+document.querySelectorAll(".log-tab").forEach((tab) =>
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".log-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    tab.classList.remove("unseen");
+    const isAgent = tab.dataset.tab === "agent";
+    $("logScroll").classList.toggle("hidden", !isAgent);
+    $("procScroll").classList.toggle("hidden", isAgent);
+  }));
+
+/* ── hot reload ──────────────────────────────────────────── */
+async function pollDevstamp() {
+  try {
+    const { stamp } = await (await fetch("/api/devstamp")).json();
+    if (state.devstamp === null) state.devstamp = stamp;
+    else if (stamp > state.devstamp) location.reload();
+  } catch (e) { /* server restarting (e.g. --dev reload) — retry */ }
+}
+setInterval(() => { if (!document.hidden) pollDevstamp(); }, 2500);
 
 /* ── wiring ──────────────────────────────────────────────── */
 $("sendBtn").addEventListener("click", send);
@@ -306,7 +496,13 @@ $("slicePlus").addEventListener("click", () => stepSlice(+1));
 
 $("outputSelect").addEventListener("change", (e) => showOutput(e.target.value));
 $("refreshOutputs").addEventListener("click", () => refreshOutputs());
-$("clearLog").addEventListener("click", () => ($("logScroll").innerHTML = ""));
+$("clearLog").addEventListener("click", () => {
+  $("logScroll").innerHTML = "";
+  $("procScroll").innerHTML = "";
+  state.counts = { agent: 0, proc: 0 };
+  $("agentCount").textContent = "";
+  $("procCount").textContent = "";
+});
 
 $("skillsBtn").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -352,4 +548,5 @@ connect();
 loadMeta();
 loadModels();
 loadSkills();
+loadProvider();
 refreshOutputs();

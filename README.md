@@ -41,9 +41,18 @@ flowchart LR
     Outputs -- "rendered (.png / .npy)" --> Server
 ```
 
-Options: `boglodite --port 8265 --segy data/my_volume.segy --copilot-bin /path/to/copilot --no-browser`. Env equivalents: `BOGLODITE_PORT`, `BOGLODITE_SEGY`, `BOGLODITE_COPILOT_BIN`.
+Options: `boglodite --port 8265 --segy data/my_volume.segy --copilot-bin /path/to/copilot --no-browser --dev`. Env equivalents: `BOGLODITE_PORT`, `BOGLODITE_SEGY`, `BOGLODITE_COPILOT_BIN`.
 
 To stop a running turn, press **■ STOP** (terminates the copilot subprocess); **new** starts a fresh session (clears agent context).
+
+### Console features
+
+- **Hot reload** — the browser polls the server and reloads itself whenever any file in `boglodite_ui/` changes. Launch with `--dev` to also auto-restart the backend on `.py` edits (uvicorn reload), giving a full edit-and-see loop.
+- **Two log channels** — the log panel has an **AGENT** tab (raw Copilot CLI JSONL, every line verbatim) and a **PROCESS** tab (subprocess output: TensorFlow/CUDA logs, epoch progress). Process output arrives two ways: tool results extracted from the agent event stream, and a live tail of `outputs/run.log` — sandbox scripts pipe long jobs through `tee -a outputs/run.log` (rule added to `.github/copilot-instructions.md`), so GPU logs stream in real time while the script runs.
+- **Dark plots everywhere** — the console injects a dark `MATPLOTLIBRC` into the agent's environment, so plots written by sandbox scripts match the console theme with zero script changes. `.npy` results are also rendered dark server-side.
+- **Grouped tool calls** — tool start/end events are paired by call id into a single chip that flips ▸ → ✔/✗ in place, ephemeral CLI bookkeeping events are filtered out, and each turn ends with a usage summary (exit code · model requests · model time · files modified).
+- **Run Locally** — a top-bar toggle switches between Copilot's own model routing (off) and a local OpenAI-compatible server such as LM Studio (on). Turning it on opens a dialog: pick the host, confirm the base URL (defaults read from `set-copilot-env.sh`), press *Detect models* (the server queries `<base>/models` for you, avoiding browser CORS), choose a model, save. The choice applies from the very next turn — no restart, because each turn spawns copilot with a freshly built environment — and `set-copilot-env.sh` is rewritten so terminal usage stays in sync.
+- **Skills** — all `skills/*/SKILL.md` are selected by default, and the skill list is injected into the prompt only once per session (re-sent only when the selection changes). This keeps follow-up turns fast: re-sending all skills every turn forces the agent to re-read every SKILL.md and re-ingest a huge prompt, which is very slow on local models.
 
 ## Work with your favorite CLI
 

@@ -102,6 +102,43 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
   min-width: 340px; max-width: 460px; max-height: 60vh; overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5); padding: 6px;
 }
+
+/* toggle switch */
+.switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch i {
+  position: absolute; inset: 0; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 10px; transition: background 0.15s;
+}
+.switch i::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--muted); transition: left 0.15s, background 0.15s;
+}
+.switch input:checked + i { background: var(--amber-dim); border-color: var(--amber); }
+.switch input:checked + i::after { left: 18px; background: var(--amber); }
+.switch input:focus-visible + i { outline: 1px solid var(--amber); outline-offset: 1px; }
+
+/* provider modal */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 40; background: rgba(4,6,8,0.65);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  width: 420px; max-width: 92vw; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6); padding: 14px 16px 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted); }
+.field input, .field select { width: 100%; padding: 6px 8px; }
+.field .row { display: flex; gap: 8px; }
+.field .row select { flex: 1 1 auto; }
+.field-note { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.field-note.err { color: var(--err); }
+.field-note.ok { color: var(--ok); }
+.modal-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .menu label {
   display: block; padding: 8px; border-radius: 3px; cursor: pointer;
 }
@@ -122,10 +159,12 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
   display: flex; flex-direction: column; min-height: 0;
 }
 
-/* viewer panes */
+/* viewer panes — flex-basis 0 so both panes get EXACTLY half the viewer
+   regardless of image content; images are absolutely positioned so their
+   intrinsic size can never inflate a pane. */
 .pane { display: flex; flex-direction: column; min-height: 0; background: var(--panel-2); }
-#paneInput  { flex: 1 1 50%; }
-#paneResult { flex: 1 1 50%; }
+#paneInput  { flex: 1 1 0; }
+#paneResult { flex: 1 1 0; }
 #divider {
   flex: 0 0 7px; cursor: row-resize;
   background: var(--panel); border-block: 1px solid var(--border);
@@ -158,7 +197,11 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
   align-items: center; justify-content: center; overflow: hidden;
   position: relative;
 }
-.pane-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.pane-body img {
+  position: absolute; inset: 6px;
+  width: calc(100% - 12px); height: calc(100% - 12px);
+  object-fit: contain;
+}
 .placeholder {
   color: var(--muted); font-family: var(--mono); font-size: 12px;
   padding: 20px; text-align: center; line-height: 1.7;
@@ -184,6 +227,15 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
   padding: 3px 9px; word-break: break-all;
 }
 .msg.tool .tname { color: var(--amber); }
+.msg.tool.tool-done { border-left-color: var(--ok); }
+.msg.tool.tool-done .tname { color: var(--ok); }
+.msg.tool.tool-fail { border-left-color: var(--err); }
+.msg.tool.tool-fail .tname { color: var(--err); }
+.msg.summary {
+  align-self: center; font-family: var(--mono); font-size: 10.5px;
+  color: var(--ok); border: 1px solid var(--border); border-radius: 3px;
+  padding: 3px 10px;
+}
 .msg.info { align-self: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .msg.err  { align-self: center; font-family: var(--mono); font-size: 11px; color: var(--err); }
 .hint { color: var(--amber); cursor: pointer; text-decoration: underline dotted; }
@@ -206,14 +258,25 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
 }
 #logDivider:hover::after { background: var(--amber-dim); }
 #logPane {
-  flex: 0 0 200px; display: flex; flex-direction: column; min-height: 64px;
+  flex: 0 0 220px; display: flex; flex-direction: column; min-height: 64px;
   background: #080b0e;
 }
-#logScroll {
+.log-tabs { display: flex; gap: 4px; }
+.log-tab {
+  background: transparent; border: 1px solid transparent; border-radius: 3px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+  color: var(--muted); padding: 3px 9px; cursor: pointer;
+}
+.log-tab.active { color: var(--amber); border-color: var(--border); background: var(--panel-2); }
+.log-tab .count { color: var(--muted); font-size: 9px; }
+.log-tab.unseen .count { color: var(--amber); }
+#logScroll, #procScroll {
   flex: 1 1 auto; margin: 0; overflow: auto; padding: 8px 12px;
   font-family: var(--mono); font-size: 10.5px; line-height: 1.6;
   color: #93a1ad; white-space: pre-wrap; word-break: break-all;
 }
+#procScroll { color: #a8c2a8; }
+#procScroll .p-head { color: var(--amber); }
 #logScroll .l-err { color: var(--err); }
 #logScroll .l-cmd { color: var(--amber); }
 .mini { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; gap: 4px; align-items: center; }

@@ -200,8 +200,11 @@ def plot_prediction(prediction, section_idx, specs, seismic_data):
     fig, axes = plt.subplots(1, 3, figsize=(24, 8))
     fig.suptitle(f"Inline {inl_segy} — Dutch F3  |  9-class facies prediction", fontsize=14)
 
-    # Panel 1: seismic amplitude
-    axes[0].imshow(seis_crop.T, aspect="auto", cmap="gray", extent=extent)
+    # Panel 1: seismic amplitude — symmetric 98th-percentile clip to match
+    # the Boglodite console viewer (class/probability panels stay unscaled).
+    vclip = float(np.percentile(np.abs(seis_crop), 98)) or 1.0
+    axes[0].imshow(seis_crop.T, aspect="auto", cmap="gray",
+                   vmin=-vclip, vmax=vclip, extent=extent)
     axes[0].set_title("Seismic amplitude")
     axes[0].set_xlabel("Xline"); axes[0].set_ylabel("Time (ms)")
 
