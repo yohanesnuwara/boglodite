@@ -1,16 +1,18 @@
 # Boglodite
 
-![logo](./assets/logo.png)
+![logo](./assets/boglodite-logo-with-text.png)
 
 Boglodite is an agent for subsurface and geoscience. There are 100+ open source repositories around geoscience and Boglodite will make it easy for geoscientists to work with these open source tools, thanks to agent 🤖 
 
-See existing tools in the gallery below. You can also add your tool to Boglodite. 
+There are 2 options. You can run it in coding assistant CLIs like Copilot CLI. Or, you can run `uv run boglodite` to open it as UI. The UI embraces the concept of **Human-In-The-Loop (HITL)** because geophysicists always love to QC result. 
 
-![logo](./assets/boglodite-ui.png)
+The following example is Boglodite, runs **entirely local** with Ornith-1.0 9B model !!!
+
+![logo](./assets/boglodite-ui-local-ornith.png)
 
 ## Open Source Tools Gallery
 
-By default, Boglodite supports the following tools and workflows, each with its own `SKILL.md`.
+See existing tools in the gallery below. You can also add your tool to Boglodite. By default, Boglodite supports the following tools and workflows, each with its own `SKILL.md`.
 
 | Name | Skill | Description |
 |---|---|---|
