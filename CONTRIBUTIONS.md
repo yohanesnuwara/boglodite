@@ -24,10 +24,16 @@ skills add skills
 
 ### Step 3 — Add the tool with the agent
 
-Use the `/add-geo-tool` command followed by the GitHub URL of the repository you want to add:
+Use the `/add-geo-tool` command (also available as `/create-doc`) followed by the GitHub URL of the repository you want to add:
 
 ```bash
 /add-geo-tool https://github.com/owner/repo-name
+```
+
+or equivalently:
+
+```bash
+/create-doc https://github.com/owner/repo-name
 ```
 
 **Example:**
