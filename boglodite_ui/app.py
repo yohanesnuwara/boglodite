@@ -34,7 +34,28 @@ from .seismic import SegyVolume, render_npy_png, render_seismic_png
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
-app = FastAPI(title="Boglodite Console")
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _lifespan(app):
+    task = asyncio.create_task(_watch_ui_commands())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="Boglodite Console", lifespan=_lifespan)
+
+# All connected console websockets (for broadcasting UI commands / refreshes).
+_clients: set[WebSocket] = set()
+
+
+async def _broadcast(msg: dict):
+    for ws in list(_clients):
+        try:
+            await ws.send_json(msg)
+        except Exception:  # noqa: BLE001 — dead sockets are pruned on disconnect
+            _clients.discard(ws)
 
 _volume: SegyVolume | None = None
 _volume_err: str | None = None
@@ -328,6 +349,176 @@ def api_models():
     return {"models": models, "default": default}
 
 
+
+# ── object panel: interpretations, survey state, UI commands ────────────────
+_STATE_FILE = os.path.join(CONFIG.repo_root, ".boglodite_ui.json")
+
+_AXIS_TOKEN = re.compile(
+    r"(inline|iline|crossline|xline|timeslice|zslice|time|ts|il|xl)[_\- ]?(\d{1,6})",
+    re.I)
+_TRAIL_NUM = re.compile(r"(\d{2,6})(?=\D*$)")
+_AXIS_NORM = {"inline": "inline", "iline": "inline", "il": "inline",
+              "crossline": "xline", "xline": "xline", "xl": "xline",
+              "timeslice": "time", "zslice": "time", "time": "time",
+              "ts": "time"}
+_PREF_EXT = (".png", ".jpg", ".jpeg", ".svg", ".gif", ".npy")
+
+
+def _classify_output(name: str):
+    """(kind, axis, value) from an outputs/ filename, best effort."""
+    low = name.lower()
+    if "fault" in low:
+        kind = "fault"
+    elif any(t in low for t in ("facies", "multi", "malenov")):
+        kind = "facies"
+    else:
+        return None
+    m = _AXIS_TOKEN.search(low)
+    if m:
+        return kind, _AXIS_NORM[m.group(1).lower()], int(m.group(2))
+    m = _TRAIL_NUM.search(os.path.splitext(low)[0])
+    if m:  # number without an axis token (e.g. F3_multi_class_110.npy)
+        return kind, None, int(m.group(1))
+    return kind, None, None
+
+
+def _pick_preferred(files: list[str]) -> str:
+    for ext in _PREF_EXT:
+        for f in files:
+            if f.lower().endswith(ext):
+                return f
+    return files[0]
+
+
+@app.get("/api/interpretations")
+def api_interpretations():
+    """Group outputs/ into the object-panel tree: kind -> axis/value -> files.
+
+    Files carrying an explicit axis token anchor an entry; axis-less
+    companions with the same kind and number (e.g. the _class/_prob .npy
+    pair next to F3_multi_inline_110.png) are attached to that entry, or
+    fall back to a new inline entry when no anchor exists.
+    """
+    out = {"facies": [], "fault": []}
+    anchored: dict[tuple, dict] = {}
+    orphans: list[tuple] = []
+    files = api_outputs()["files"]
+    for f in files:
+        c = _classify_output(f["name"])
+        if not c:
+            continue
+        kind, axis, value = c
+        if value is None:
+            continue
+        if axis is None:
+            orphans.append((kind, value, f["name"]))
+            continue
+        key = (kind, axis, value)
+        e = anchored.setdefault(key, {"axis": axis, "value": value,
+                                      "files": [], "mtime": 0})
+        e["files"].append(f["name"])
+        e["mtime"] = max(e["mtime"], f["mtime"])
+    for kind, value, name in orphans:
+        hits = [k for k in anchored if k[0] == kind and k[2] == value]
+        if len(hits) == 1:
+            anchored[hits[0]]["files"].append(name)
+        else:
+            key = (kind, "inline", value)   # assume inline when ambiguous
+            e = anchored.setdefault(key, {"axis": "inline", "value": value,
+                                          "files": [], "mtime": 0,
+                                          "inferred": True})
+            e["files"].append(name)
+    for (kind, _, _), e in anchored.items():
+        e["preferred"] = _pick_preferred(e["files"])
+        out[kind].append(e)
+    for kind in out:
+        out[kind].sort(key=lambda e: ({"inline": 0, "xline": 1, "time": 2}
+                                      .get(e["axis"], 3), e["value"]))
+    return out
+
+
+@app.get("/api/state")
+def api_state_get():
+    state = {"survey_name": "F3 seismic"}
+    try:
+        with open(_STATE_FILE, encoding="utf-8") as f:
+            state.update(json.load(f))
+    except (OSError, ValueError):
+        pass
+    return state
+
+
+@app.post("/api/state")
+def api_state_set(payload: dict = Body(...)):
+    state = api_state_get()
+    if payload.get("survey_name"):
+        state["survey_name"] = str(payload["survey_name"]).strip()[:80]
+    try:
+        with open(_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except OSError:
+        pass
+    return state
+
+
+def _validate_ui_command(cmd: dict) -> dict | None:
+    if not isinstance(cmd, dict) or cmd.get("action") != "open":
+        return None
+    target = str(cmd.get("target", "")).lower()
+    axis = _AXIS_NORM.get(str(cmd.get("axis", "")).lower())
+    try:
+        value = int(cmd.get("value"))
+    except (TypeError, ValueError):
+        return None
+    if target not in ("seismic", "facies", "fault") or axis is None:
+        return None
+    return {"type": "ui_command", "action": "open",
+            "target": target, "axis": axis, "value": value}
+
+
+@app.post("/api/ui/command")
+async def api_ui_command(payload: dict = Body(...)):
+    msg = _validate_ui_command(payload)
+    if msg is None:
+        raise HTTPException(422, "Expected {action:'open', target:'seismic|"
+                                 "facies|fault', axis:'inline|xline|time', "
+                                 "value:int}")
+    await _broadcast(msg)
+    return {"ok": True}
+
+
+_UI_CMD_FILE_NAME = "ui_command.json"
+
+
+async def _watch_ui_commands():
+    """The agent's hands on the console: watch outputs/ui_command.json.
+
+    Copilot's bash tool writes a one-line JSON command there (documented in
+    copilot-instructions.md); we read it, delete it, and broadcast to every
+    connected console so the object panel and viewer react.
+    """
+    path = os.path.join(CONFIG.outputs_dir, _UI_CMD_FILE_NAME)
+    while True:
+        try:
+            if os.path.isfile(path):
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        raw = f.read().strip()
+                    os.remove(path)
+                    msg = _validate_ui_command(json.loads(raw)) if raw else None
+                    if msg:
+                        await _broadcast(msg)
+                    elif raw:
+                        await _broadcast({"type": "info",
+                                          "text": "⚠ Agent sent a UI command "
+                                                  "the console couldn't parse."})
+                except (OSError, ValueError):
+                    pass
+        except Exception:  # noqa: BLE001 — the watcher must never die
+            pass
+        await asyncio.sleep(0.4)
+
+
 # ── chat websocket ───────────────────────────────────────────────────────────
 _SKILL_PREAMBLE = ("Load and follow these skill files (relative to the repo "
                    "root); keep them in mind for the whole session:")
@@ -351,6 +542,7 @@ def _build_prompt(text: str, skill_paths: list[str]) -> str:
 @app.websocket("/ws")
 async def ws_chat(ws: WebSocket):
     await ws.accept()
+    _clients.add(ws)
     await ws.send_json({"type": "status", "state": "idle",
                         "session_id": _session.session_id})
     turn_task: asyncio.Task | None = None
@@ -439,6 +631,7 @@ async def ws_chat(ws: WebSocket):
                                     "session_id": _session.session_id,
                                     "reset": True})
     except WebSocketDisconnect:
+        _clients.discard(ws)
         if turn_task and not turn_task.done():
             turn_task.cancel()
 
@@ -488,6 +681,8 @@ def main():
     _register_skills_dir()
 
     url = f"http://{args.host}:{args.port}"
+    os.environ["BOGLODITE_UI_URL"] = url
+    os.environ["BOGLODITE_PORT"] = str(args.port)
     print(f"\n  ⛰  Boglodite console → {url}"
           + ("   [dev mode: auto-reload]" if args.dev else "") + "\n")
     if not args.no_browser:

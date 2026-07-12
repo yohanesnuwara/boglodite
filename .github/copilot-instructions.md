@@ -35,6 +35,20 @@ uv run python sandbox/FaultSeg/predict_only_fault.py 150 2>&1 | tee -a outputs/r
 
 The console tails `outputs/run.log` live, so TensorFlow/CUDA logs and epoch progress appear in its PROCESS log panel while the script runs. Quick commands (ls, cat, grep) do not need this.
 
+### Controlling the console UI (object panel & viewer)
+
+The Boglodite console has an object panel (Seismic survey slices, and Interpretation results for Facies and Fault) plus a seismic viewer. You can open items in it by writing a single-line JSON command:
+
+```bash
+echo '{"action": "open", "target": "facies", "axis": "inline", "value": 150}' > outputs/ui_command.json
+```
+
+- `target`: `"seismic"` (open a slice of the input volume), `"facies"` or `"fault"` (open an existing interpretation result from `outputs/`)
+- `axis`: `"inline"`, `"xline"` (crossline), or `"time"` (time slice)
+- `value`: the slice number
+
+Use this when the user asks to open, show, or display a slice or an **existing** result (e.g. "open the facies result at inline 150", "show me crossline 400"). For interpretation targets, first check that a matching file exists in `outputs/` (e.g. `ls outputs/ | grep -i 'facies\|multi\|fault'`); if none exists, tell the user instead of sending the command. Newly produced results are displayed automatically when your run finishes — no command needed for those.
+
 ---
 
 

@@ -147,12 +147,56 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
 #layout {
   flex: 1 1 auto; display: flex; min-height: 0;
 }
+#objectPanel {
+  flex: 0 0 240px; min-width: 170px; max-width: 420px;
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel-2); border-right: 1px solid var(--border);
+}
+#objectTree {
+  flex: 1 1 auto; overflow: auto; padding: 6px 4px 12px;
+  font-size: 12.5px; user-select: none;
+}
+#panelDivider {
+  flex: 0 0 6px; cursor: col-resize; background: var(--panel);
+  border-right: 1px solid var(--border); position: relative;
+}
+#panelDivider:hover { background: var(--border-soft); }
+
+/* tree rows */
+.tnode { }
+.trow {
+  display: flex; align-items: center; gap: 5px;
+  padding: 2px 4px; border-radius: 3px; white-space: nowrap;
+  cursor: default; line-height: 1.5;
+}
+.trow:hover { background: var(--panel); }
+.trow.checked-row .tlabel { color: var(--text); }
+.twisty {
+  width: 14px; flex: 0 0 14px; text-align: center;
+  color: var(--muted); font-size: 9px; cursor: pointer;
+}
+.twisty.leaf { visibility: hidden; }
+.tcheck { width: 13px; height: 13px; margin: 0; accent-color: var(--amber); cursor: pointer; }
+.ticon { width: 15px; height: 15px; flex: 0 0 15px; display: inline-block; }
+.tlabel { color: #b9c4ce; overflow: hidden; text-overflow: ellipsis; }
+.tlabel.branch { font-weight: 600; color: var(--text); }
+.tlabel.editable { cursor: text; }
+.tlabel.editing {
+  outline: 1px solid var(--amber); border-radius: 2px;
+  background: var(--panel); padding: 0 3px; color: var(--text);
+}
+.tcount { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.tchildren { margin-left: 17px; border-left: 1px dotted var(--border-soft); padding-left: 3px; }
+.tchildren.collapsed { display: none; }
+.tempty { color: var(--muted); font-size: 11px; font-style: italic; padding: 2px 8px 2px 36px; }
+
+/* ── viewer / sidebar columns ───────────────────────────── */
 #viewer {
-  flex: 1 1 62%; min-width: 0; display: flex; flex-direction: column;
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
   border-right: 1px solid var(--border);
 }
 #sidebar {
-  flex: 0 0 38%; min-width: 340px; max-width: 620px;
+  flex: 0 0 34%; min-width: 330px; max-width: 600px;
   display: flex; flex-direction: column; min-height: 0;
 }
 
@@ -305,8 +349,10 @@ select:focus, input:focus, textarea:focus, button:focus-visible {
 .mini { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
 
 /* ── narrow screens ─────────────────────────────────────── */
-@media (max-width: 960px) {
+@media (max-width: 1080px) {
   #layout { flex-direction: column; overflow-y: auto; }
+  #objectPanel { flex: 0 0 auto; max-width: none; max-height: 220px; border-right: none; border-bottom: 1px solid var(--border); }
+  #panelDivider { display: none; }
   #viewer { border-right: none; border-bottom: 1px solid var(--border); }
   #sidebar { max-width: none; flex: 1 1 auto; min-height: 50vh; }
   .menu { right: 10px; }

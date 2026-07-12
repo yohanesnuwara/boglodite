@@ -156,6 +156,7 @@ async function loadMeta() {
   const s = state.meta.segy;
   $("inputPlaceholder").textContent = `Survey loaded: ${s.file}`;
   applyAxisRange();
+  treeInitDefaults();
   loadSlice();
 }
 
@@ -194,6 +195,7 @@ async function loadSlice() {
     img.classList.remove("hidden");
     $("inputPlaceholder").classList.add("hidden");
     $("inputTag").textContent = `// ${axis.toUpperCase()} ${snapped || value}`;
+    treeSetSeismic(axis, parseInt(snapped || value, 10));
   } catch (e) {
     $("inputTag").textContent = `// ${axis.toUpperCase()} ${value} — failed`;
     addLog("slice load failed: " + e.message, "l-err");
@@ -226,6 +228,8 @@ async function refreshOutputs(selectName) {
 async function showOutput(name) {
   if (!name) {
     state.resultShown = false;
+    tree.checkedResult = null;
+    if (typeof renderTree === "function") renderTree();
     $("resultImg").classList.add("hidden");
     $("resultPlaceholder").classList.remove("hidden");
     $("resultTag").textContent = "// outputs/";
@@ -244,6 +248,7 @@ async function showOutput(name) {
     $("resultPlaceholder").classList.add("hidden");
     $("resultTag").textContent = `// outputs/${name}`;
     state.resultShown = true;
+    treeSyncResult(name);
   } catch (e) {
     $("resultTag").textContent = `// outputs/${name} — cannot render`;
     addLog("output render failed: " + e.message, "l-err");
@@ -398,10 +403,13 @@ function handleEvent(ev) {
       chatEl("info", ev.code === 0 ? "— turn complete —" : `— agent exited with code ${ev.code} —`);
       state.currentAssistant = null;
       break;
+    case "ui_command":
+      handleUiCommand(ev);
+      break;
     case "outputs_changed":
       if (ev.new && ev.new.length) {
         chatEl("info", "New outputs: " + ev.new.join(", "));
-        refreshOutputs(ev.new[0]);
+        refreshInterpretations().then(() => refreshOutputs(ev.new[0]));
       } else {
         refreshOutputs();
       }
@@ -613,3 +621,247 @@ loadModels();
 loadSkills();
 loadProvider();
 refreshOutputs();
+/* ═════════════════════════════════════════════════════════════
+   OBJECT PANEL — Petrel-style tree
+   Seismic > Survey (editable) > Inline / Crossline / Time slice
+   Interpretation > Facies | Fault > entries discovered in outputs/
+   ═════════════════════════════════════════════════════════════ */
+const tree = {
+  surveyName: "F3 seismic",
+  expanded: { seismic: true, survey: true, interp: true, facies: true, fault: true },
+  seismic: { inline: null, xline: null, time: null, active: null },
+  interp: { facies: [], fault: [] },
+  checkedResult: null,          // filename currently shown in the result pane
+};
+
+const AXIS_LABEL = { inline: "Inline", xline: "Crossline", time: "Time slice" };
+
+const TICONS = {
+  seismic: '<svg viewBox="0 0 15 15"><path d="M2 5l5-3 6 3v5l-6 3-5-3z" fill="#2e7d8c" stroke="#4db6c9" stroke-width="0.8"/><path d="M2 5l5 3 6-3M7 8v7" stroke="#4db6c9" stroke-width="0.8" fill="none"/></svg>',
+  survey:  '<svg viewBox="0 0 15 15"><path d="M2 5l5-3 6 3v5l-6 3-5-3z" fill="#2e8c50" stroke="#57c983" stroke-width="0.8"/><path d="M2 5l5 3 6-3M7 8v7" stroke="#57c983" stroke-width="0.8" fill="none"/></svg>',
+  inline:  '<svg viewBox="0 0 15 15"><rect x="6" y="1.5" width="3" height="12" fill="#3f72b8" stroke="#7aa6dd" stroke-width="0.7" transform="skewY(-8)"/></svg>',
+  xline:   '<svg viewBox="0 0 15 15"><rect x="1.5" y="6" width="12" height="3" fill="#2e8c50" stroke="#57c983" stroke-width="0.7" transform="skewX(-8)"/></svg>',
+  time:    '<svg viewBox="0 0 15 15"><path d="M2 8l5-2.5 6 2.5-5 2.5z" fill="#b8860b" stroke="#e3a23c" stroke-width="0.7"/></svg>',
+  interp:  '<svg viewBox="0 0 15 15"><path d="M1.5 4h4l1.5 2h6.5v6h-12z" fill="#5a4a2e" stroke="#a08040" stroke-width="0.7"/></svg>',
+  facies:  '<svg viewBox="0 0 15 15"><rect x="2" y="3" width="11" height="3" fill="#c4453c"/><rect x="2" y="6" width="11" height="3" fill="#3f72b8"/><rect x="2" y="9" width="11" height="3" fill="#2e8c50"/></svg>',
+  fault:   '<svg viewBox="0 0 15 15"><rect x="2" y="3" width="11" height="9" fill="#20262d"/><path d="M4 3l3 9M8 3l3 9" stroke="#c4453c" stroke-width="1.4"/></svg>',
+};
+
+function tRow({ depth, twisty, expandKey, checkbox, checked, icon, label, count,
+                branch, onCheck, onOpenLabel, editable }) {
+  const row = document.createElement("div");
+  row.className = "trow" + (checked ? " checked-row" : "");
+  const tw = document.createElement("span");
+  tw.className = "twisty" + (twisty ? "" : " leaf");
+  tw.textContent = twisty ? (tree.expanded[expandKey] ? "▾" : "▸") : "";
+  if (twisty) tw.addEventListener("click", () => {
+    tree.expanded[expandKey] = !tree.expanded[expandKey]; renderTree();
+  });
+  row.appendChild(tw);
+  if (checkbox) {
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.className = "tcheck"; cb.checked = !!checked;
+    cb.addEventListener("change", () => onCheck && onCheck(cb.checked));
+    row.appendChild(cb);
+  }
+  const ic = document.createElement("span");
+  ic.className = "ticon"; ic.innerHTML = TICONS[icon] || "";
+  row.appendChild(ic);
+  const lb = document.createElement("span");
+  lb.className = "tlabel" + (branch ? " branch" : "") + (editable ? " editable" : "");
+  lb.textContent = label;
+  if (onOpenLabel) { lb.style.cursor = "pointer"; lb.addEventListener("click", () => onOpenLabel()); }
+  if (editable) lb.addEventListener("dblclick", () => startSurveyEdit(lb));
+  row.appendChild(lb);
+  if (count !== undefined) {
+    const c = document.createElement("span");
+    c.className = "tcount"; c.textContent = `(${count})`;
+    row.appendChild(c);
+  }
+  return row;
+}
+
+function startSurveyEdit(lb) {
+  lb.classList.add("editing");
+  lb.contentEditable = "true";
+  lb.focus();
+  document.getSelection().selectAllChildren(lb);
+  const commit = async () => {
+    lb.contentEditable = "false"; lb.classList.remove("editing");
+    const name = lb.textContent.trim() || "F3 seismic";
+    tree.surveyName = name;
+    await fetch("/api/state", { method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ survey_name: name }) });
+    renderTree();
+  };
+  lb.addEventListener("blur", commit, { once: true });
+  lb.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); lb.blur(); }
+    if (e.key === "Escape") { lb.textContent = tree.surveyName; lb.blur(); }
+  });
+}
+
+function renderTree() {
+  const root = $("objectTree");
+  root.innerHTML = "";
+
+  /* ── Seismic ─────────────────────────────────────────── */
+  root.appendChild(tRow({ twisty: true, expandKey: "seismic", icon: "seismic",
+                          label: "Seismic", branch: true }));
+  const seisKids = document.createElement("div");
+  seisKids.className = "tchildren" + (tree.expanded.seismic ? "" : " collapsed");
+  seisKids.appendChild(tRow({ twisty: true, expandKey: "survey", icon: "survey",
+                              label: tree.surveyName, branch: true, editable: true }));
+  const survKids = document.createElement("div");
+  survKids.className = "tchildren" + (tree.expanded.survey ? "" : " collapsed");
+  for (const axis of ["inline", "xline", "time"]) {
+    const v = tree.seismic[axis];
+    survKids.appendChild(tRow({
+      checkbox: true, checked: tree.seismic.active === axis,
+      icon: axis, label: AXIS_LABEL[axis] + (v !== null ? " " + v : ""),
+      onCheck: (on) => on ? openSeismicFromTree(axis) : renderTree(),
+      onOpenLabel: () => openSeismicFromTree(axis),
+    }));
+  }
+  seisKids.appendChild(survKids);
+  root.appendChild(seisKids);
+
+  /* ── Interpretation ──────────────────────────────────── */
+  root.appendChild(tRow({ twisty: true, expandKey: "interp", icon: "interp",
+                          label: "Interpretation", branch: true }));
+  const interpKids = document.createElement("div");
+  interpKids.className = "tchildren" + (tree.expanded.interp ? "" : " collapsed");
+  for (const kind of ["facies", "fault"]) {
+    const entries = tree.interp[kind] || [];
+    interpKids.appendChild(tRow({
+      twisty: true, expandKey: kind, icon: kind,
+      label: kind === "facies" ? "Facies" : "Fault",
+      branch: true, count: entries.length,
+    }));
+    const kids = document.createElement("div");
+    kids.className = "tchildren" + (tree.expanded[kind] ? "" : " collapsed");
+    if (!entries.length) {
+      const empty = document.createElement("div");
+      empty.className = "tempty";
+      empty.textContent = "no results in outputs/ yet";
+      kids.appendChild(empty);
+    }
+    for (const e of entries) {
+      const isChecked = e.files.includes(tree.checkedResult);
+      kids.appendChild(tRow({
+        checkbox: true, checked: isChecked, icon: e.axis,
+        label: `${AXIS_LABEL[e.axis]} ${e.value}` + (e.inferred ? " ~" : ""),
+        onCheck: (on) => on ? openInterpretation(kind, e)
+                            : (tree.checkedResult = null, showOutput(""), renderTree()),
+        onOpenLabel: () => openInterpretation(kind, e),
+      }));
+    }
+    interpKids.appendChild(kids);
+  }
+  root.appendChild(interpKids);
+}
+
+/* ── tree actions ────────────────────────────────────────── */
+function openSeismicFromTree(axis) {
+  $("axisSelect").value = axis;
+  applyAxisRange();
+  if (tree.seismic[axis] !== null) $("sliceValue").value = tree.seismic[axis];
+  loadSlice();
+}
+
+function openInterpretation(kind, entry) {
+  tree.checkedResult = entry.preferred;
+  const sel = $("outputSelect");
+  if ([...sel.options].some((o) => o.value === entry.preferred)) sel.value = entry.preferred;
+  showOutput(entry.preferred);
+  // QC workflow: bring the matching seismic slice into the input pane too.
+  $("axisSelect").value = entry.axis;
+  applyAxisRange();
+  $("sliceValue").value = entry.value;
+  loadSlice();
+  renderTree();
+}
+
+function treeSetSeismic(axis, value) {
+  tree.seismic[axis] = value;
+  tree.seismic.active = axis;
+  renderTree();
+}
+
+function treeSyncResult(name) {
+  for (const kind of ["facies", "fault"]) {
+    for (const e of tree.interp[kind]) {
+      if (e.files.includes(name)) { tree.checkedResult = e.preferred; renderTree(); return; }
+    }
+  }
+  tree.checkedResult = name;   // not an interpretation — nothing checked in tree
+  renderTree();
+}
+
+async function refreshInterpretations() {
+  try {
+    tree.interp = await (await fetch("/api/interpretations")).json();
+  } catch (e) { /* server restarting */ }
+  renderTree();
+}
+
+function treeInitDefaults() {
+  const s = state.meta && state.meta.segy;
+  if (!s) { renderTree(); return; }
+  const mid = (r) => Math.round((r.min + r.max) / 2 / r.step) * r.step;
+  if (tree.seismic.inline === null) tree.seismic.inline = parseInt($("sliceValue").value, 10) || mid(s.inline);
+  if (tree.seismic.xline === null) tree.seismic.xline = mid(s.xline);
+  if (tree.seismic.time === null) tree.seismic.time = mid(s.time);
+  renderTree();
+}
+
+/* ── agent-driven UI commands ───────────────────────────── */
+async function handleUiCommand(ev) {
+  if (ev.action !== "open") return;
+  const axisName = AXIS_LABEL[ev.axis] || ev.axis;
+  if (ev.target === "seismic") {
+    $("axisSelect").value = ev.axis;
+    applyAxisRange();
+    $("sliceValue").value = ev.value;
+    loadSlice();
+    chatEl("info", `⚙ Agent opened seismic · ${axisName} ${ev.value}`);
+    return;
+  }
+  await refreshInterpretations();
+  const entry = (tree.interp[ev.target] || []).find(
+    (e) => e.axis === ev.axis && e.value === ev.value);
+  if (entry) {
+    openInterpretation(ev.target, entry);
+    chatEl("info", `⚙ Agent opened ${ev.target} · ${axisName} ${ev.value}`);
+  } else {
+    chatEl("info", `⚙ Agent asked to open ${ev.target} at ${axisName} ${ev.value}, ` +
+      "but no matching result exists in outputs/.");
+  }
+}
+
+/* ── panel divider drag ─────────────────────────────────── */
+$("panelDivider").addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  const div = $("panelDivider");
+  div.setPointerCapture(e.pointerId);
+  const move = (ev) => {
+    const w = Math.min(420, Math.max(170, ev.clientX));
+    $("objectPanel").style.flex = `0 0 ${w}px`;
+  };
+  const up = () => {
+    div.removeEventListener("pointermove", move);
+    div.removeEventListener("pointerup", up);
+  };
+  div.addEventListener("pointermove", move);
+  div.addEventListener("pointerup", up);
+});
+
+/* ── tree boot ──────────────────────────────────────────── */
+(async function initTree() {
+  try {
+    const st = await (await fetch("/api/state")).json();
+    tree.surveyName = st.survey_name || "F3 seismic";
+  } catch (e) { /* defaults */ }
+  await refreshInterpretations();
+})();
