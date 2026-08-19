@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "boglodite-seismic": {
+      "type": "local",
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp==2.0.0",
+        "python",
+        "-m",
+        "boglodite_mcp.server"
+      ],
+      "tools": [
+        "*"
+      ],
+      "timeout": 7200000
+    }
+  }
+}

@@ -34,6 +34,37 @@ See existing tools in the gallery below. You can also add your tool to Boglodite
 
 </details>
 
+## MCP tool interface
+
+Boglodite now includes a project-local **Model Context Protocol (MCP)** server that exposes validated seismic operations as typed tools. This adds a stable interface between the general-purpose coding agent and the existing seismic implementations without replacing the domain skills or numerical algorithms.
+
+The committed `.github/mcp.json` makes the server discoverable by GitHub Copilot CLI. It adds the pinned official MCP Python SDK (`mcp==2.0.0`) at server startup with `uv --with`, leaving the locked seismic environment unchanged. After `uv sync`, verify it with:
+
+```bash
+copilot mcp list
+copilot mcp get boglodite-seismic
+```
+
+The server currently exposes:
+
+- `check_boglodite_readiness` — verify F3 data, model weights, and adapters
+- `inspect_seismic_volume` — inspect SEG-Y geometry and valid coordinates
+- `run_faultseg(slice_type, coordinate)` — execute canonical FaultSeg prediction
+- `run_malenov(inline)` — execute canonical MalenoV facies prediction
+
+Conceptually, the **harness** still carries geophysical instructions, skills, constraints, and validation logic; MCP standardizes the interface used to invoke deterministic seismic capabilities. See [`docs/MCP.md`](./docs/MCP.md) for architecture and testing details.
+
+```mermaid
+flowchart LR
+    User[Interpreter intent] --> Agent[Copilot CLI agent]
+    Agent --> Harness[Boglodite harness: instructions + skills + constraints]
+    Harness --> MCP[Boglodite MCP server]
+    MCP --> Fault[FaultSeg adapter]
+    MCP --> Facies[MalenoV adapter]
+    Fault --> Outputs[(outputs/)]
+    Facies --> Outputs
+```
+
 ## HITL Console
 
 Boglodite ships with a human-in-the-loop web console that wraps the Copilot CLI agent: chat with the agent, watch it work in the live process log, browse the input seismic volume (inline / crossline / time slice), and review results from `outputs/` — all in one screen.
@@ -49,7 +80,7 @@ To expose the `boglodite` command globally (so typing `boglodite` anywhere in th
 uv tool install --editable .
 ```
 
-The console keeps the existing Copilot CLI architecture untouched — each chat turn is one non-interactive run:
+The console continues to drive the Copilot CLI directly — each chat turn is one non-interactive run. The repository-scoped MCP server is discovered by Copilot and provides the canonical seismic tool interface:
 
 ```
 copilot -p "<prompt>" --session-id <uuid> --allow-all-tools --output-format json --no-ask-user

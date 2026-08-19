@@ -25,6 +25,17 @@ Use `uv run python` to execute scripts.
 
 Put any output files (plots, saved models, numpy arrays, CSVs, etc.) in the `/outputs` folder inside the repo root directory.
 
+### Canonical seismic operations via MCP
+
+Boglodite exposes validated seismic operations through the project-local `boglodite-seismic` MCP server. For canonical prediction tasks, prefer the MCP tools over reconstructing command lines or editing scripts:
+
+- `check_boglodite_readiness` — verify data, models, and adapters
+- `inspect_seismic_volume` — inspect F3 SEG-Y geometry and coordinate ranges
+- `run_faultseg(slice_type, coordinate)` — fault prediction on inline, xline, or time slice
+- `run_malenov(inline)` — facies prediction on one inline
+
+The MCP layer standardizes invocation. Skills still provide geophysical procedural knowledge and workflow guidance. Use direct repository/sandbox execution for development, training, debugging, or operations not exposed by MCP.
+
 ### Long-running script logging
 
 When executing long-running scripts (training, prediction, GPU jobs), stream their output to the Boglodite console by piping through `tee`:

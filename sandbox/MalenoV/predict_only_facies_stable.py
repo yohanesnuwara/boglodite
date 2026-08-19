@@ -25,6 +25,7 @@ Companion scripts:
   * predict_only_facies_stable.py -- this file (recommended)
 """
 
+import argparse
 import os
 import time
 
@@ -56,6 +57,19 @@ BATCH  = 256    # moderate batch: avoids OOM thrashing on the ~3.3GB GPU pool
 
 # Measured full-resolution per-voxel baseline (v1/v2, inline 140, 358,182 vox).
 BASELINE_SECONDS = 649.52
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run MalenoV facies prediction on one Dutch F3 inline.")
+    parser.add_argument(
+        "legacy_inline", nargs="?", type=int,
+        help="Backward-compatible positional inline number.",
+    )
+    parser.add_argument("--inline", dest="inline_num", type=int, help="SEG-Y inline coordinate.")
+    args = parser.parse_args()
+    if args.legacy_inline is not None and args.inline_num is not None:
+        parser.error("positional inline cannot be combined with --inline")
+    return args.inline_num if args.inline_num is not None else args.legacy_inline
 
 
 def predict_section_strided(data, model, section_idx, num_classes,
@@ -116,6 +130,12 @@ def predict_section_strided(data, model, section_idx, num_classes,
 
 
 def main():
+    inline_override = parse_args()
+    section_segy = SECTION_SEGY.copy()
+    if inline_override is not None:
+        section_segy[0] = inline_override
+        section_segy[1] = inline_override
+
     data, specs = load_segy(SEGY_PATH)
 
     print(f"\nLoading saved model: {MODEL_SAVE}")
@@ -125,7 +145,7 @@ def main():
         compile=False,
     )
 
-    section_idx = segy_to_index(SECTION_SEGY, specs, data.shape)
+    section_idx = segy_to_index(section_segy, specs, data.shape)
 
     cs = 2 * CUBE_INCR + 1
     print("\nWarming up GPU ...")
@@ -135,7 +155,7 @@ def main():
     pred = predict_section_strided(data, model, section_idx, NUM_CLASSES)
     t_pred = time.perf_counter() - t0
 
-    inl_tag = int(SECTION_SEGY[0])
+    inl_tag = int(section_segy[0])
     cls_map = pred.argmax(axis=-1)
 
     print("\n" + "=" * 60)
