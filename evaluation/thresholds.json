@@ -1,0 +1,18 @@
+{
+  "note": "Preregister these before scoring agent runs. Defaults are intentionally strict because candidate outputs are compared with frozen executions of the same underlying scientific models. If GPU repeatability requires wider tolerances, calibrate them from repeated direct canonical executions before opening agent results.",
+  "thresholds": {
+    "faultseg": {
+      "max_nrms_percent": 1.0,
+      "min_correlation": 0.999,
+      "max_mae": 0.005,
+      "probability_min": -0.00001,
+      "probability_max": 1.00001
+    },
+    "malenov": {
+      "min_voxel_agreement": 0.995,
+      "min_macro_f1": 0.99,
+      "min_mean_iou": 0.98,
+      "probability_sum_tolerance": 0.02
+    }
+  }
+}

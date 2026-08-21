@@ -172,3 +172,28 @@ Support coming soon
 ### Opencode
 
 Support coming soon
+## Research evaluation rubric
+
+The repository includes a compact evaluation framework for the TLE study under
+[`evaluation/`](./evaluation/README.md). It implements the planned **bare agent
+vs. full Boglodite** comparison with fixed F3 tasks, frozen canonical references,
+FaultSeg and MalenoV numerical metrics, the three primary outcomes (correct,
+silent numerical failure, overt failure), human-intervention recording, and
+paper-ready CSV/JSON summaries.
+
+Quick start:
+
+```bash
+uv run boglodite-eval list
+uv run boglodite-eval manifest
+# run a deterministic task, then freeze it as a reference:
+uv run boglodite-eval freeze-reference --task F1
+# after an agent run has been archived:
+uv run boglodite-eval score --task F1 --condition boglodite --replicate 1 \
+  --candidate-dir evaluation/candidates/F1/boglodite/r01
+uv run boglodite-eval summarize
+```
+
+See [`evaluation/README.md`](./evaluation/README.md) before collecting scored
+runs; in particular, freeze the tasks/thresholds and keep reference outputs
+outside the agent-readable workspace.
