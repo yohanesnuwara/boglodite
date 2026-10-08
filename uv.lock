@@ -74,28 +74,41 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "gdown" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "scikit-image" },
     { name = "segyio" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+models = [
+    { name = "gdown" },
     { name = "tensorflow", extra = ["and-cuda"] },
     { name = "tf-keras" },
-    { name = "uvicorn", extra = ["standard"] },
+]
+models-cpu = [
+    { name = "gdown" },
+    { name = "tensorflow" },
+    { name = "tf-keras" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "gdown", specifier = ">=6.0.0" },
+    { name = "gdown", marker = "extra == 'models'", specifier = ">=6.0.0" },
+    { name = "gdown", marker = "extra == 'models-cpu'", specifier = ">=6.0.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
     { name = "numpy", specifier = ">=1.26.0" },
     { name = "scikit-image", specifier = ">=0.26.0" },
     { name = "segyio", specifier = ">=1.9.0" },
-    { name = "tensorflow", extras = ["and-cuda"], specifier = ">=2.21.0" },
-    { name = "tf-keras", specifier = ">=2.21.0" },
+    { name = "tensorflow", marker = "extra == 'models-cpu'", specifier = ">=2.21.0" },
+    { name = "tensorflow", extras = ["and-cuda"], marker = "extra == 'models'", specifier = ">=2.21.0" },
+    { name = "tf-keras", marker = "extra == 'models'", specifier = ">=2.21.0" },
+    { name = "tf-keras", marker = "extra == 'models-cpu'", specifier = ">=2.21.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
+provides-extras = ["models", "models-cpu"]
 
 [[package]]
 name = "certifi"

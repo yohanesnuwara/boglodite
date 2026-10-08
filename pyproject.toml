@@ -5,9 +5,6 @@ description = "Boglodite — agent for subsurface and geoscience, with a HITL we
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "gdown>=6.0.0",
-    "tensorflow[and-cuda]>=2.21.0",
-    "tf-keras>=2.21.0",
     "segyio>=1.9.0",
     "numpy>=1.26.0",
     "matplotlib>=3.8.0",
@@ -16,9 +13,26 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
 ]
 
+# Neural-network inference (FaultSeg / MalenoV / facies_net) is optional.
+# The base install stays light; pull in a flavour only when you run models:
+#   uv sync --extra models       # NVIDIA GPU (CUDA wheels, multi-GB)
+#   uv sync --extra models-cpu   # CPU-only (no CUDA wheels)
+[project.optional-dependencies]
+models = [
+    "tensorflow[and-cuda]>=2.21.0",
+    "tf-keras>=2.21.0",
+    "gdown>=6.0.0",
+]
+models-cpu = [
+    "tensorflow>=2.21.0",
+    "tf-keras>=2.21.0",
+    "gdown>=6.0.0",
+]
+
 [project.scripts]
 boglodite = "boglodite_ui.app:main"
 boglodite-eval = "boglodite_eval.cli:main"
+boglodite-init = "boglodite_ui.bootstrap:main"
 
 [build-system]
 requires = ["hatchling"]
