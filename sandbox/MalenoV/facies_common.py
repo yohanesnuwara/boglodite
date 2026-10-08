@@ -179,26 +179,43 @@ def predict_section(data, model, section_idx, num_classes, batch_size=64):
 
 
 # ── Plotting ───────────────────────────────────────────────────────────────────
-def plot_prediction(prediction, section_idx, specs, seismic_data):
-    pred_slice = prediction[0]                          # (n_xl, n_z, 9)
-    class_map  = pred_slice.argmax(axis=-1)             # (n_xl, n_z)
+def plot_prediction(prediction, section_idx, specs, seismic_data, orientation="inline"):
+    if orientation == "xline":
+        pred_slice = prediction[:, 0]                   # (n_inl, n_z, 9)
+    else:
+        pred_slice = prediction[0]                      # (n_xl, n_z, 9)
+    class_map  = pred_slice.argmax(axis=-1)             # (n_free, n_z)
 
-    # SEGY coordinate extents for axis labels
-    xl_min_s = specs["xl_start"] + section_idx[2] * specs["xl_step"]
-    xl_max_s = specs["xl_start"] + section_idx[3] * specs["xl_step"]
     t_min_s  = specs["t_start"]  + section_idx[4] * specs["t_step"]
     t_max_s  = specs["t_start"]  + section_idx[5] * specs["t_step"]
-    extent   = [xl_min_s, xl_max_s, t_max_s, t_min_s]
 
-    # Matching seismic amplitude crop
-    il_idx = section_idx[0]
-    seis_crop = seismic_data[il_idx, section_idx[2]:section_idx[3]+1,
-                             section_idx[4]:section_idx[5]+1, 0]
+    if orientation == "xline":
+        # Free axis = inline; fixed xline.
+        free_min_s = specs["inl_start"] + section_idx[0] * specs["inl_step"]
+        free_max_s = specs["inl_start"] + section_idx[1] * specs["inl_step"]
+        xl_idx = section_idx[2]
+        seis_crop = seismic_data[section_idx[0]:section_idx[1]+1, xl_idx,
+                                 section_idx[4]:section_idx[5]+1, 0]
+        fixed_segy = specs["xl_start"] + xl_idx * specs["xl_step"]
+        free_label = "Inline"
+        title_fixed = f"Xline {fixed_segy}"
+        out_fig = os.path.join(OUT_DIR, f"F3_multi_xline_{fixed_segy}.png")
+    else:
+        # Free axis = xline; fixed inline.
+        free_min_s = specs["xl_start"] + section_idx[2] * specs["xl_step"]
+        free_max_s = specs["xl_start"] + section_idx[3] * specs["xl_step"]
+        il_idx = section_idx[0]
+        seis_crop = seismic_data[il_idx, section_idx[2]:section_idx[3]+1,
+                                 section_idx[4]:section_idx[5]+1, 0]
+        fixed_segy = specs["inl_start"] + il_idx * specs["inl_step"]
+        free_label = "Xline"
+        title_fixed = f"Inline {fixed_segy}"
+        out_fig = os.path.join(OUT_DIR, f"F3_multi_inline_{fixed_segy}.png")
 
-    inl_segy = specs["inl_start"] + il_idx * specs["inl_step"]
+    extent = [free_min_s, free_max_s, t_max_s, t_min_s]
 
     fig, axes = plt.subplots(1, 3, figsize=(24, 8))
-    fig.suptitle(f"Inline {inl_segy} — Dutch F3  |  9-class facies prediction", fontsize=14)
+    fig.suptitle(f"{title_fixed} — Dutch F3  |  9-class facies prediction", fontsize=14)
 
     # Panel 1: seismic amplitude — symmetric 98th-percentile clip to match
     # the Boglodite console viewer (class/probability panels stay unscaled).
@@ -206,7 +223,7 @@ def plot_prediction(prediction, section_idx, specs, seismic_data):
     axes[0].imshow(seis_crop.T, aspect="auto", cmap="gray",
                    vmin=-vclip, vmax=vclip, extent=extent)
     axes[0].set_title("Seismic amplitude")
-    axes[0].set_xlabel("Xline"); axes[0].set_ylabel("Time (ms)")
+    axes[0].set_xlabel(free_label); axes[0].set_ylabel("Time (ms)")
 
     # Panel 2: predicted class map (9 discrete colours)
     cmap9  = get_cmap("tab10", NUM_CLASSES)
@@ -215,7 +232,7 @@ def plot_prediction(prediction, section_idx, specs, seismic_data):
     im2    = axes[1].imshow(class_map.T, aspect="auto",
                             cmap=cmap9, norm=norm, extent=extent)
     axes[1].set_title("Predicted facies class")
-    axes[1].set_xlabel("Xline"); axes[1].set_ylabel("Time (ms)")
+    axes[1].set_xlabel(free_label); axes[1].set_ylabel("Time (ms)")
     cbar = plt.colorbar(im2, ax=axes[1], ticks=range(NUM_CLASSES))
     cbar.ax.set_yticklabels(FACIES_NAMES, fontsize=7)
 
@@ -224,10 +241,9 @@ def plot_prediction(prediction, section_idx, specs, seismic_data):
     im3 = axes[2].imshow(max_prob.T, aspect="auto", cmap="plasma",
                          vmin=0, vmax=1, extent=extent)
     axes[2].set_title("Prediction confidence (max prob)")
-    axes[2].set_xlabel("Xline"); axes[2].set_ylabel("Time (ms)")
+    axes[2].set_xlabel(free_label); axes[2].set_ylabel("Time (ms)")
     plt.colorbar(im3, ax=axes[2], label="Max class probability")
 
     plt.tight_layout()
-    out_fig = os.path.join(OUT_DIR, f"F3_multi_inline_{inl_segy}.png")
     plt.savefig(out_fig, dpi=150, bbox_inches="tight")
     print(f"Saved: {out_fig}")

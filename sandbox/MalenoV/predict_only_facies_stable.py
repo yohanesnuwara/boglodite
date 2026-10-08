@@ -60,16 +60,46 @@ BASELINE_SECONDS = 649.52
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run MalenoV facies prediction on one Dutch F3 inline.")
+    parser = argparse.ArgumentParser(description="Run MalenoV facies prediction on one Dutch F3 section.")
     parser.add_argument(
         "legacy_inline", nargs="?", type=int,
         help="Backward-compatible positional inline number.",
     )
     parser.add_argument("--inline", dest="inline_num", type=int, help="SEG-Y inline coordinate.")
+    parser.add_argument("--orientation", choices=("inline", "xline"),
+                        help="Slice orientation. Use with --value.")
+    parser.add_argument("--value", type=int, help="SEG-Y coordinate for the chosen orientation.")
     args = parser.parse_args()
+
+    if args.orientation is not None or args.value is not None:
+        if args.legacy_inline is not None or args.inline_num is not None:
+            parser.error("--orientation/--value cannot be combined with the inline shortcut")
+        if (args.orientation is None) != (args.value is None):
+            parser.error("--orientation and --value must be supplied together")
+        return args.orientation, args.value
+
     if args.legacy_inline is not None and args.inline_num is not None:
         parser.error("positional inline cannot be combined with --inline")
-    return args.inline_num if args.inline_num is not None else args.legacy_inline
+    inline = args.inline_num if args.inline_num is not None else args.legacy_inline
+    return "inline", inline
+
+
+def build_section(orientation, value, specs):
+    """Build a SECTION_SEGY spec, insetting the two free axes by CUBE_INCR.
+
+    Mirrors the historical inline default ([130,130, 330,1220, 124,1728]),
+    which is exactly CUBE_INCR steps inside the survey on every free axis.
+    """
+    ci = CUBE_INCR
+    inl_lo = specs["inl_start"] + ci * specs["inl_step"]
+    inl_hi = specs["inl_end"]   - ci * specs["inl_step"]
+    xl_lo  = specs["xl_start"]  + ci * specs["xl_step"]
+    xl_hi  = specs["xl_end"]    - ci * specs["xl_step"]
+    t_lo   = specs["t_start"]   + ci * specs["t_step"]
+    t_hi   = specs["t_end"]     - ci * specs["t_step"]
+    if orientation == "inline":
+        return np.array([value, value, xl_lo, xl_hi, t_lo, t_hi])
+    return np.array([inl_lo, inl_hi, value, value, t_lo, t_hi])
 
 
 def predict_section_strided(data, model, section_idx, num_classes,
@@ -130,13 +160,15 @@ def predict_section_strided(data, model, section_idx, num_classes,
 
 
 def main():
-    inline_override = parse_args()
-    section_segy = SECTION_SEGY.copy()
-    if inline_override is not None:
-        section_segy[0] = inline_override
-        section_segy[1] = inline_override
+    orientation, value = parse_args()
 
     data, specs = load_segy(SEGY_PATH)
+
+    if value is not None:
+        section_segy = build_section(orientation, value, specs)
+    else:
+        section_segy = SECTION_SEGY.copy()
+        orientation = "inline"
 
     print(f"\nLoading saved model: {MODEL_SAVE}")
     model = keras.models.load_model(
@@ -155,27 +187,35 @@ def main():
     pred = predict_section_strided(data, model, section_idx, NUM_CLASSES)
     t_pred = time.perf_counter() - t0
 
-    inl_tag = int(section_segy[0])
+    if orientation == "xline":
+        tag = int(section_segy[2])
+        tag_label = f"xline {tag}"
+        prob_name = f"F3_multi_prob_xl{tag}.npy"
+        class_name = f"F3_multi_class_xl{tag}.npy"
+    else:
+        tag = int(section_segy[0])
+        tag_label = f"inline {tag}"
+        prob_name = f"F3_multi_prob_{tag}.npy"
+        class_name = f"F3_multi_class_{tag}.npy"
     cls_map = pred.argmax(axis=-1)
 
     print("\n" + "=" * 60)
-    print(f"  stable  strided (STRIDE={STRIDE}, batch={BATCH})  inline {inl_tag}")
+    print(f"  stable  strided (STRIDE={STRIDE}, batch={BATCH})  {tag_label}")
     print("=" * 60)
     print(f"  prediction time         : {t_pred:8.2f} s")
     print(f"  full-res baseline (v1/v2): {BASELINE_SECONDS:8.2f} s")
     print(f"  speedup vs full-res     : {BASELINE_SECONDS / t_pred:8.2f}x")
     print("=" * 60)
 
-    np.save(os.path.join(OUT_DIR, f"F3_multi_prob_{inl_tag}.npy"), pred)
-    np.save(os.path.join(OUT_DIR, f"F3_multi_class_{inl_tag}.npy"),
-            cls_map.astype(np.int8))
-    print(f"\nSaved  F3_multi_prob_{inl_tag}.npy  shape={pred.shape}")
+    np.save(os.path.join(OUT_DIR, prob_name), pred)
+    np.save(os.path.join(OUT_DIR, class_name), cls_map.astype(np.int8))
+    print(f"\nSaved  {prob_name}  shape={pred.shape}")
 
     print("Plotting ...")
-    plot_prediction(pred, section_idx, specs, data)
+    plot_prediction(pred, section_idx, specs, data, orientation=orientation)
 
     print("\nPredicted class distribution:")
-    cmap = pred[0].argmax(axis=-1)
+    cmap = cls_map.reshape(-1)
     for c in range(NUM_CLASSES):
         pct = 100 * (cmap == c).sum() / cmap.size
         print(f"  class {c} ({FACIES_NAMES[c]:20s}): {pct:5.1f}%")
