@@ -7,3 +7,14 @@ sandbox/MalenoV/__pycache__/*
 # Python bytecode caches
 __pycache__/
 *.py[cod]
+# Research evaluation outputs (large/generated)
+evaluation
+evaluation/candidates/
+evaluation/workspaces/
+evaluation/runs/*.json
+evaluation/references/*/*.npy
+evaluation/references/*/*.png
+evaluation/references/*/manifest.json
+evaluation/summary.csv
+evaluation/summary.json
+evaluation/reproducibility_manifest.json

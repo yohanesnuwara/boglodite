@@ -254,6 +254,8 @@ class AgentSession:
         ]
         if self.model:
             cmd += ["--model", self.model]
+        if os.environ.get("BOGLODITE_DISABLE_MCP", "").strip().lower() in {"1", "true", "yes", "on"}:
+            cmd += ["--disable-mcp-server=boglodite-seismic"]
         cmd += self.extra_args
         return cmd
 
@@ -263,6 +265,11 @@ class AgentSession:
         # and unbuffer python stdout so `tee outputs/run.log` streams live.
         env.setdefault("MATPLOTLIBRC", _DARK_RC)
         env.setdefault("PYTHONUNBUFFERED", "1")
+        # The UI runs Copilot in non-interactive prompt mode. Opt in to the
+        # repository-scoped MCP server because prompt mode cannot display the
+        # normal first-use workspace trust prompt. The server itself is defined
+        # in this repository under .github/mcp.json.
+        env.setdefault("GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP", "true")
         for k in self.env_unset:
             env.pop(k, None)
         env.update(self.env_overrides)

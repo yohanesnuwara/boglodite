@@ -1,0 +1,54 @@
+{
+  "benchmark_version": "tle-compact-v1",
+  "design": "6 tasks x 2 primary conditions x 3 repetitions = 36 primary runs",
+  "tasks": [
+    {
+      "id": "F1",
+      "tool": "faultseg",
+      "orientation": "inline",
+      "coordinate": 150,
+      "prompt": "Extract faults on inline 150 of the F3 seismic and save the numerical result and QC image.",
+      "candidate_files": {"prediction": "F3_fault_inline_150.npy", "figure": "F3_fault_inline_150.png"}
+    },
+    {
+      "id": "F2",
+      "tool": "faultseg",
+      "orientation": "xline",
+      "coordinate": 800,
+      "prompt": "Extract faults on crossline 800 of the F3 seismic and save the numerical result and QC image.",
+      "candidate_files": {"prediction": "F3_fault_xline_800.npy", "figure": "F3_fault_xline_800.png"}
+    },
+    {
+      "id": "F3",
+      "tool": "faultseg",
+      "orientation": "timeslice",
+      "coordinate": 1000,
+      "prompt": "Generate the FaultSeg fault probability map at 1000 ms from the F3 seismic and save the numerical result and QC image.",
+      "candidate_files": {"prediction": "F3_fault_timeslice_1000.npy", "figure": "F3_fault_timeslice_1000.png"}
+    },
+    {
+      "id": "M1",
+      "tool": "malenov",
+      "orientation": "inline",
+      "coordinate": 130,
+      "prompt": "Create a seismic facies map for F3 inline 130 and save the numerical class and probability outputs and QC image.",
+      "candidate_files": {"probabilities": "F3_multi_prob_130.npy", "classes": "F3_multi_class_130.npy", "figure": "F3_multi_inline_130.png"}
+    },
+    {
+      "id": "M2",
+      "tool": "malenov",
+      "orientation": "inline",
+      "coordinate": 300,
+      "prompt": "Create a seismic facies map for F3 inline 300 and save the numerical class and probability outputs and QC image.",
+      "candidate_files": {"probabilities": "F3_multi_prob_300.npy", "classes": "F3_multi_class_300.npy", "figure": "F3_multi_inline_300.png"}
+    },
+    {
+      "id": "M3",
+      "tool": "malenov",
+      "orientation": "inline",
+      "coordinate": 500,
+      "prompt": "Create a seismic facies map for F3 inline 500 and save the numerical class and probability outputs and QC image.",
+      "candidate_files": {"probabilities": "F3_multi_prob_500.npy", "classes": "F3_multi_class_500.npy", "figure": "F3_multi_inline_500.png"}
+    }
+  ]
+}

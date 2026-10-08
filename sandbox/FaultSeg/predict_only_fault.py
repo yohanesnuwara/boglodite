@@ -34,6 +34,7 @@ Outputs (written to outputs/):
     F3_fault_<orient>_<num>.png   -- seismic + fault probability overlay
 """
 
+import argparse
 import math
 import os
 
@@ -64,14 +65,51 @@ SEGY_PATH  = os.path.join(REPO_ROOT, "data", "Dutch F3 seismic data", "Dutch Gov
 MODEL_PATH = os.path.join(REPO_ROOT, "models", "faultSeg_model", "model", "fseg-60.hdf5")
 OUT_DIR    = os.path.join(REPO_ROOT, "outputs")
 
-# Section to predict, SEGY coords: [inl_min, inl_max, xl_min, xl_max, t_min, t_max]
-# Collapse one pair (min == max) to choose inline / crossline / time slice.
-SECTION_SEGY = np.array([150, 150, 300, 1250, 4, 1848])
+# Default section to predict, SEGY coords:
+# [inl_min, inl_max, xl_min, xl_max, t_min, t_max].
+DEFAULT_SECTION_SEGY = np.array([150, 150, 300, 1250, 4, 1848])
 
-# Optional CLI override: `uv run python predict_only_fault.py <inline_num>`
-# selects a full inline slice at that inline number.
-if len(sys.argv) > 1:
-    SECTION_SEGY = np.array([int(sys.argv[1]), int(sys.argv[1]), 300, 1250, 4, 1848])
+
+def parse_cli_request():
+    """Parse an optional slice request while preserving the legacy inline CLI."""
+    parser = argparse.ArgumentParser(description="Run FaultSeg on one Dutch F3 slice.")
+    parser.add_argument(
+        "legacy_inline", nargs="?", type=int,
+        help="Backward-compatible positional inline number.",
+    )
+    parser.add_argument(
+        "--orientation", choices=("inline", "xline", "timeslice"),
+        help="Slice orientation. Use with --value.",
+    )
+    parser.add_argument(
+        "--value", type=float,
+        help="SEG-Y coordinate; for timeslice this is time in milliseconds.",
+    )
+    args = parser.parse_args()
+    if args.legacy_inline is not None:
+        if args.orientation is not None or args.value is not None:
+            parser.error("positional inline cannot be combined with --orientation/--value")
+        return "inline", float(args.legacy_inline)
+    if (args.orientation is None) != (args.value is None):
+        parser.error("--orientation and --value must be supplied together")
+    if args.orientation is None:
+        return None
+    return args.orientation, float(args.value)
+
+
+def section_from_request(specs, request):
+    """Build a full-survey section from an orientation/coordinate request."""
+    if request is None:
+        return DEFAULT_SECTION_SEGY.copy()
+    orient, value = request
+    if orient == "inline":
+        return np.array([value, value, specs["xl_start"], specs["xl_end"],
+                         specs["t_start"], specs["t_end"]])
+    if orient == "xline":
+        return np.array([specs["il_start"], specs["il_end"], value, value,
+                         specs["t_start"], specs["t_end"]])
+    return np.array([specs["il_start"], specs["il_end"],
+                     specs["xl_start"], specs["xl_end"], value, value])
 
 CONTEXT = 128    # context window (voxels) along the slice axis for inline/xline
 TILE    = 256    # window size along each tiled (free) horizontal axis
@@ -302,10 +340,11 @@ def plot_section(seis, fault, orient, num, axes_meaning, specs,
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     specs = read_specs(SEGY_PATH)
-    orient, tgt_idx, ranges = classify_section(SECTION_SEGY, specs)
-    num = {"inline": int(SECTION_SEGY[0]),
-           "xline": int(SECTION_SEGY[2]),
-           "timeslice": int(SECTION_SEGY[4])}[orient]
+    section_segy = section_from_request(specs, parse_cli_request())
+    orient, tgt_idx, ranges = classify_section(section_segy, specs)
+    num = {"inline": int(section_segy[0]),
+           "xline": int(section_segy[2]),
+           "timeslice": int(section_segy[4])}[orient]
     print(f"=== FaultSeg — {orient} {num} ===")
 
     print(f"Loading SEGY: {SEGY_PATH}")

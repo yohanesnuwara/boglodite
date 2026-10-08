@@ -21,6 +21,11 @@ The tool was created by Charles Rutherford Ildstad at ConocoPhillips (2017) and 
 
 ---
 
+
+## Boglodite MCP execution
+
+For routine F3 facies prediction, prefer the project MCP tool `run_malenov(inline)` rather than editing the repository or predictor configuration manually. The MCP tool delegates to the validated Boglodite adapter in `sandbox/MalenoV/predict_only_facies_stable.py`. Use direct repository execution for training, research inspection, or unsupported custom workflows.
+
 ## Verified Repository Summary
 
 | Item | Detail |

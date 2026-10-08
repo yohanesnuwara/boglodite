@@ -16,6 +16,11 @@ Published as:
 
 ---
 
+
+## Boglodite MCP execution
+
+For routine F3 prediction, prefer the project MCP tool `run_faultseg(slice_type, coordinate)` rather than rebuilding the repository command sequence. The MCP tool delegates to the validated Boglodite adapter in `sandbox/FaultSeg/predict_only_fault.py`, which preserves the axis ordering, normalization, padding, trained model, and output conventions described in this skill. Use direct repository execution for training, research inspection, or unsupported custom workflows.
+
 ## Verified Repository Summary
 
 | Item | Detail |
