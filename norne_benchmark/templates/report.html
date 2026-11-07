@@ -1,0 +1,389 @@
+<title>__TITLE__</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --page:#f9f9f7;--panel:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#7b7a75;--line:#e3e2dd;--grid:#ecebe7;
+  --neutral:#f0efec;--ref:#2a78d6;--cand:#eb6834;--view:#0d1013;--accent:#2a78d6;
+  --good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--page:#0d0d0d;--panel:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#8d8c85;--line:#2c2c2a;--grid:#262624;--neutral:#383835;--ref:#3987e5;--cand:#d95926;--accent:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;--page:#0d0d0d;--panel:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#8d8c85;--line:#2c2c2a;--grid:#262624;--neutral:#383835;--ref:#3987e5;--cand:#d95926;--accent:#3987e5}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;padding-inline:max(16px,env(safe-area-inset-left,0px));padding-block:16px 40px}
+.wrap{max-width:1440px;margin:0 auto}
+a{color:var(--accent)}
+header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+h1{font-size:1.3rem;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:.85rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:3px;padding:1px 6px;color:var(--ink2)}
+.hero{text-align:right}
+.hero .big{font-size:2.6rem;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.hero .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:0}
+.card h3{margin:0;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:flex;justify-content:space-between}
+.card .val{font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin:2px 0}
+.card table{width:100%;border-collapse:collapse;font-size:.76rem;margin-top:6px}
+.card td{padding:3px 0;color:var(--ink2);vertical-align:top;border-top:1px solid var(--grid)}
+.card td:last-child{text-align:right;color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px}
+.card .tol{font-size:.68rem;color:var(--muted)}
+.card .val small{font-size:.8rem;font-weight:500;color:var(--muted);margin-left:4px}
+.card.absent{opacity:.55}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:500}
+.st i{font-style:normal;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;font-size:.7rem;color:#fff;font-weight:700}
+.st.correct i{background:var(--good)}.st.degraded i{background:var(--warn);color:#1a1a19}.st.silent_failure i{background:var(--crit)}.st.overt_failure i{background:var(--serious);color:#1a1a19}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:16px;min-width:0}
+section > .sh{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between}
+section h2{margin:0;font-size:1rem;font-weight:600}
+section .what{color:var(--ink2);font-size:.82rem;max-width:90ch}
+.body{padding:12px 14px;display:grid;gap:14px}
+.two{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+@media(max-width:1000px){.two{grid-template-columns:minmax(0,1fr)}}
+.ctl{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:.8rem;color:var(--ink2)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{font:inherit;font-size:.78rem;border:0;background:transparent;color:var(--ink2);padding:3px 9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=range]{accent-color:var(--accent)}
+.view{position:relative;background:var(--view);border-radius:4px;overflow:hidden}
+#c3{display:block;width:100%;aspect-ratio:16/11;touch-action:none}
+.hud{position:absolute;left:10px;top:8px;font-family:var(--mono);font-size:.7rem;color:#b8c4cc;pointer-events:none;text-shadow:0 1px 2px #000}
+.banner{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(208,59,59,.92);color:#fff;font-size:.8rem;padding:6px 10px;border-radius:4px}
+.map{position:relative}
+.map canvas{display:block;width:100%;border-radius:4px;background:var(--panel)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:.75rem;color:var(--ink2)}
+.ramp{width:180px;height:10px;border-radius:2px}
+.lg{display:inline-flex;align-items:center;gap:5px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
+.tip{position:fixed;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:.76rem;font-family:var(--mono);box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:9;white-space:nowrap}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.8rem;color:var(--ink2)}
+.stats b{color:var(--ink);font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.tbl{width:100%;border-collapse:collapse;font-size:.76rem;font-variant-numeric:tabular-nums}
+.tbl th{text-align:left;font-weight:500;color:var(--muted);font-size:.7rem;border-bottom:1px solid var(--line);padding:3px 4px}
+.tbl td{padding:3px 4px;border-bottom:1px solid var(--grid);font-family:var(--mono)}
+.tbl td.n,.tbl th.n{text-align:right}
+.bar{height:8px;border-radius:2px;background:var(--grid);position:relative;min-width:60px}
+.bar span{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--ref)}
+.scroll{max-height:360px;overflow:auto}
+.mult{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.mult figure{margin:0}
+.mult figcaption{font-size:.78rem;font-weight:500;margin-bottom:2px}
+.note{font-size:.76rem;color:var(--muted)}
+details summary{cursor:pointer;font-size:.8rem;color:var(--ink2)}
+[hidden]{display:none!important}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <h1 id="title">Norne benchmark run</h1>
+    <div class="sub">Candidate scored against the hidden Norne reference (ATW 2013). Errors are candidate − reference.</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="hero"><div class="lbl">Composite score</div><div class="big" id="composite">–</div><div class="sub" id="coverage"></div></div>
+</header>
+<div class="legend" style="margin-bottom:8px" id="statuslegend"></div>
+<div class="cards" id="cards"></div>
+
+<section id="sec-struct" hidden>
+  <div class="sh"><h2>Structural &amp; stratigraphic modelling</h2><span class="what">Left: the candidate grid in 3D, cells coloured by depth error against the nearest reference cell in the same layer. Right: map of a zone-top depth error or a zone-thickness error.</span></div>
+  <div class="body two">
+    <div>
+      <div class="ctl" style="margin-bottom:6px">
+        <span class="seg" id="colorby"><button data-c="err" aria-pressed="true">Depth error</button><button data-c="depth" aria-pressed="false">Depth</button></span>
+        <label>K <input type="range" id="k0" min="1" max="22" value="1" style="width:70px"><input type="range" id="k1" min="1" max="22" value="22" style="width:70px"> <span id="kv" style="font-family:var(--mono)">1–22</span></label>
+        <label>VE <input type="range" id="ve" min="1" max="12" value="5" style="width:70px"> <span id="vev" style="font-family:var(--mono)">5×</span></label>
+        <label><input type="checkbox" id="edges" checked> edges</label>
+        <label><input type="checkbox" id="f-ref"> reference faults</label>
+        <label><input type="checkbox" id="f-cand"> candidate faults</label>
+      </div>
+      <div class="view"><canvas id="c3"></canvas><div class="hud" id="hud"></div><div class="banner" id="banner" hidden></div></div>
+      <div class="legend" style="margin-top:6px" id="lg3d"></div>
+    </div>
+    <div>
+      <div class="ctl" style="margin-bottom:6px"><span>Surface</span><span class="seg" id="surfsel"></span></div>
+      <div class="map"><canvas id="mapTop" data-h="1.15"></canvas></div>
+      <div class="legend" style="margin-top:6px"><span id="rampLo">shallower</span><canvas class="ramp" id="rampTop" width="180" height="10"></canvas><span id="rampHi">deeper</span><span id="rampTopLbl" style="font-family:var(--mono)"></span><span class="lg"><i class="sw" style="background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 5px)"></i>not covered</span></div>
+      <div class="stats" id="topstats" style="margin-top:6px"></div>
+    </div>
+  </div>
+  <div class="body" style="padding-top:0">
+    <div><div style="font-size:.85rem;font-weight:500">Blind-well picks</div><div class="note">Each dot is one 2002 pick in a blind well: grid depth at the pick location minus the pick depth. Band = ±τ (10 m). The reference grid itself misses these by ~6.6 m RMS.</div></div>
+    <div class="map"><canvas id="dots" data-h="0.26"></canvas></div>
+  </div>
+</section>
+
+<section id="sec-faults" hidden>
+  <div class="sh"><h2>Fault interpretation</h2><span class="what">2006 reference sticks (blue) over the active reservoir, with candidate fault points coloured by distance to the nearest reference point. Table: how much of each reference fault the candidate found within 100 m.</span></div>
+  <div class="body two">
+    <div>
+      <div class="map"><canvas id="mapF" data-h="1.0"></canvas></div>
+      <div class="legend" style="margin-top:6px"><span class="lg"><i class="sw" style="background:var(--ref)"></i>reference</span><span>candidate, distance:</span><span>0 m</span><canvas class="ramp" id="rampF" width="180" height="10"></canvas><span>≥ 300 m</span></div>
+    </div>
+    <div><div class="stats" id="fltstats" style="margin-bottom:8px"></div><div class="scroll"><table class="tbl" id="ftab"></table></div></div>
+  </div>
+</section>
+
+<section id="sec-hz" hidden>
+  <div class="sh"><h2>Seismic horizons · Not 2 Fm top (time)</h2><span class="what">Candidate − reference two-way time at reference nodes over the reservoir. Hatched = no candidate within 4 lines.</span></div>
+  <div class="body two">
+    <div><div class="map"><canvas id="mapH" data-h="1.0"></canvas></div>
+      <div class="legend" style="margin-top:6px"><span>earlier</span><canvas class="ramp" id="rampH" width="180" height="10"></canvas><span>later</span><span style="font-family:var(--mono)">±45 ms</span></div></div>
+    <div class="stats" id="hzstats" style="align-content:start"></div>
+  </div>
+</section>
+
+<section id="sec-props" hidden>
+  <div class="sh"><h2>Petrophysical modelling</h2><span class="what">Left: porosity along the blind-well paths, candidate cell against reference cell. Right: distribution of each property over active cells per zone.</span></div>
+  <div class="body two" style="padding-bottom:0"><div><div class="map"><canvas id="xplot" data-h="0.9"></canvas></div><div class="note">Dots: blind-well samples every 5 m MD. Diagonal = perfect agreement.</div></div><div class="stats" id="petrostats" style="align-content:start"></div></div>
+  <div class="body">
+    <div class="ctl"><span class="seg" id="propsel"><button data-p="PORO" aria-pressed="true">Porosity</button><button data-p="NTG" aria-pressed="false">Net-to-gross</button><button data-p="LOGK" aria-pressed="false">log₁₀ k</button></span>
+      <span class="legend"><span class="lg"><i class="sw" style="background:var(--ref)"></i>reference</span><span class="lg"><i class="sw" style="background:var(--cand)"></i>candidate</span></span></div>
+    <div class="mult" id="hists"></div>
+  </div>
+</section>
+
+<section id="sec-vol" hidden>
+  <div class="sh"><h2>Reservoir evaluation</h2><span class="what">STOIIP per zone and equilibration region, candidate relative to reference (GIVEN contacts, B<sub>o</sub>, saturation-height). Red = more oil than the reference, blue = less. Band = ±5 %.</span></div>
+  <div class="body two">
+    <div><div class="map"><canvas id="volbars" data-h="0.6"></canvas></div></div>
+    <div><table class="tbl" id="voltab"></table></div>
+  </div>
+</section>
+<section id="sec-fac" hidden>
+  <div class="sh"><h2>Facies modelling</h2><span class="what">Facies proportion per zone (active cells), against the range spanned by the 120 Norne realizations (blue bar = P10–P90).</span></div>
+  <div class="body"><table class="tbl" id="factab"></table><div class="note" id="facnote"></div></div>
+</section>
+<section id="sec-conn" hidden>
+  <div class="sh"><h2>Reservoir connectivity</h2><span class="what">Hydrocarbon compartments (cells above their WOC linked through overlapping faces, including across faults) compared with the reference, and whether each pair of wells sits in a connected compartment.</span></div>
+  <div class="body"><div class="stats" id="connstats"></div></div>
+</section>
+<div class="note">Generated by <code>norne_benchmark.report</code>. Contains reference data — keep outside agent workspaces.</div>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>window.RUN=__DATA__;</script>
+<script>
+(function(){
+const D=window.RUN,R=D.res,$=id=>document.getElementById(id);
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt=(v,d=1)=>v==null||!isFinite(v)?'–':Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const ORDER=['HZ','FLT','STRUCT','STRAT','FAC','PETRO','VOL','CONN'];
+const NAMES={HZ:'Seismic horizons',FLT:'Fault interpretation',STRUCT:'Structural modelling',STRAT:'Stratigraphic modelling',FAC:'Facies modelling',PETRO:'Petrophysical modelling',VOL:'Reservoir evaluation',CONN:'Reservoir connectivity'};
+function mval(v,m){if(v==null)return'–';if(m.unit==='frac'&&m.sense==='ge')return fmt(v*100,1)+' %';if(m.unit==='%')return (v>0?'+':'')+fmt(v,1)+' %';
+  if(m.unit==='m'||m.unit==='ms')return fmt(v,1)+' '+m.unit;if(m.unit==='frac')return fmt(v,3);if(m.unit==='log mD')return fmt(v,2);return fmt(v,2)}
+function mtol(m){const t=m.unit==='%'?fmt(m.tol,0)+' %':mval(m.tol,{...m,unit:m.unit==='%'?'':m.unit});return(m.sense==='le'?(m.unit==='%'?'within ±':'≤ '):'≥ ')+(m.unit==='%'?fmt(m.tol,0)+' %':t)}
+const tick=ok=>`<span aria-label="${ok?'pass':'fail'}" style="color:var(${ok?'--good':'--crit'});font-weight:700">${ok?'✓':'✗'}</span>`;
+const OUT={correct:['✓','correct'],degraded:['◐','degraded'],silent_failure:['!','silent failure'],overt_failure:['✕','overt failure']};
+const st=o=>`<span class="st ${o}"><i aria-hidden="true">${OUT[o][0]}</i>${OUT[o][1]}</span>`;
+
+// ---- colour helpers ----
+const hx=h=>{h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+const lerp=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+function ramp(stops,t){t=Math.max(0,Math.min(1,t))*(stops.length-1);const i=Math.min(stops.length-2,Math.floor(t));return lerp(hx(stops[i]),hx(stops[i+1]),t-i)}
+const BLUE=['#104281','#2a78d6','#9ec5f4'],RED=['#f2a6a5','#e34948','#8a1f1f'];
+function div(v,lim){if(v==null||!isFinite(v))return null;const t=Math.max(-1,Math.min(1,v/lim));const n=css('--neutral');
+  return t<0?ramp([...BLUE,n],1+t):ramp([n,...RED],t)}
+const SEQ_O=['#f4a07a','#eb6834','#c4501f','#8f3412','#5c1f07'];
+const rgb=a=>a?`rgb(${a[0]},${a[1]},${a[2]})`:'transparent';
+function drawRamp(cv,f){const g=cv.getContext('2d');for(let x=0;x<cv.width;x++){g.fillStyle=rgb(f(x/(cv.width-1)));g.fillRect(x,0,1,cv.height)}}
+
+// ---- header + cards ----
+$('title').textContent='Norne benchmark · '+D.run;
+const man=R.manifest||{};$('chips').innerHTML=Object.entries(man).slice(0,8).map(([k,v])=>`<span class="chip">${k}: ${typeof v==='object'?JSON.stringify(v):v}</span>`).join('')+`<span class="chip">scored in ${R.seconds}s</span>`;
+$('composite').textContent=fmt(R.composite,3);$('coverage').textContent=`${R.checks_passed}/${R.checks_total} checks passed · ${R.stages_scored.length}/8 stages submitted`;
+$('statuslegend').innerHTML=Object.keys(OUT).map(st).join('')+'<span class="note">Each check compares a geoscience quantity with its tolerance (✓ / ✗). The composite score only ranks runs.</span>';
+$('cards').innerHTML=ORDER.map(k=>{const d=R.stages[k],name=NAMES[k];
+  if(!d)return`<div class="card absent"><h3><span>${name}</span></h3><div class="note" style="margin-top:6px">not submitted</div></div>`;
+  const rows=Object.values(d.metrics).filter(m=>m.primary).map(m=>`<tr><td>${m.label}</td><td>${mval(m.value,m)} ${tick(m.pass)}<div class="tol">${mtol(m)}</div></td></tr>`).join('');
+  return`<div class="card"><h3><span>${name}</span><span>${d.weight===3?'very high':'high'}</span></h3><div class="val">${d.passed}/${d.n_primary}<small> checks</small></div>${st(d.outcome)}${d.overt?`<div class="note">${d.overt}</div>`:''}<table>${rows}</table></div>`}).join('');
+
+// ---- tooltip ----
+const tip=$('tip');function showTip(e,html){tip.innerHTML=html;tip.hidden=false;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+12)+'px'}
+function hideTip(){tip.hidden=true}
+
+// ---- 2D map canvas: shared extent = reference footprint ----
+let EXT=null;
+function setupCanvas(cv){const w=cv.clientWidth||600,h=Math.round(w*(+cv.dataset.h||1)),dpr=Math.min(2,devicePixelRatio||1);cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w,h}}
+function mapXform(w,h){const [x0,x1,y0,y1]=EXT,pad=14,s=Math.min((w-2*pad)/(x1-x0),(h-2*pad)/(y1-y0)),ox=(w-(x1-x0)*s)/2,oy=(h-(y1-y0)*s)/2;
+  return{X:x=>ox+(x-x0)*s,Y:y=>h-oy-(y-y0)*s,s,inv:(px,py)=>[x0+(px-ox)/s,y0+(h-oy-py)/s]}}
+function hatch(g){const p=document.createElement('canvas');p.width=p.height=6;const q=p.getContext('2d');q.strokeStyle=css('--muted');q.globalAlpha=.45;q.beginPath();q.moveTo(0,6);q.lineTo(6,0);q.stroke();return g.createPattern(p,'repeat')}
+function footprint(g,T,fill){const P=D.maps?D.maps.polys:null;if(!P)return;g.fillStyle=fill;for(let i=0;i<P.length;i+=8){g.beginPath();g.moveTo(T.X(P[i]),T.Y(P[i+1]));for(let k=2;k<8;k+=2)g.lineTo(T.X(P[i+k]),T.Y(P[i+k+1]));g.closePath();g.fill()}}
+function scaleBar(g,T,w,h){const m=1000,px=m*T.s;g.strokeStyle=css('--ink2');g.fillStyle=css('--ink2');g.lineWidth=1.5;g.beginPath();g.moveTo(12,h-12);g.lineTo(12+px,h-12);g.stroke();g.font='11px IBM Plex Mono, monospace';g.fillText('1 km',14+px,h-8);
+  g.beginPath();g.moveTo(w-18,26);g.lineTo(w-18,10);g.stroke();g.fillText('N',w-22,40)}
+function hoverable(cv,items,T){ // items: [{x,y,html}]
+  cv.onmousemove=e=>{const r=cv.getBoundingClientRect(),[wx,wy]=T().inv(e.clientX-r.left,e.clientY-r.top);let best=null,bd=1e18;
+    for(const it of items()){const d=(it.x-wx)**2+(it.y-wy)**2;if(d<bd){bd=d;best=it}}
+    if(best&&Math.sqrt(bd)*T().s<14)showTip(e,best.html);else hideTip()};cv.onmouseleave=hideTip}
+
+// ---- S5 zone-top map ----
+const SURF=['Garn top','Not top','Ile top','Tofte top','Tilje top','Tilje base'];let surf='Garn top';
+const THK=['Garn','Ile','Tofte','Tilje'];const isThk=()=>THK.includes(surf);const mapVals=()=>isThk()?D.maps.thick[surf]:D.maps.diff[surf];const mapLim=()=>isThk()?3*D.tau.thick_m:LIM_D;
+const LIM_D=3*D.tau.depth_m;
+function drawTop(){const cv=$('mapTop');const{g,w,h}=setupCanvas(cv);const T=mapXform(w,h),P=D.maps.polys,v=mapVals(),hp=hatch(g),lim=mapLim();
+  for(let n=0,i=0;i<P.length;i+=8,n++){g.beginPath();g.moveTo(T.X(P[i]),T.Y(P[i+1]));for(let k=2;k<8;k+=2)g.lineTo(T.X(P[i+k]),T.Y(P[i+k+1]));g.closePath();const c=div(v[n],lim);g.fillStyle=c?rgb(c):hp;g.fill()}
+  // blind picks of this surface
+  scaleBar(g,T,w,h);
+  const ok=v.filter(x=>x!=null),rms=ok.length?Math.sqrt(ok.reduce((a,b)=>a+b*b,0)/ok.length):null,mean=ok.length?ok.reduce((a,b)=>a+b,0)/ok.length:null;
+  const tl=isThk()?D.tau.thick_m:D.tau.depth_m,mae=ok.length?ok.reduce((a,b)=>a+Math.abs(b),0)/ok.length:null,within=ok.length?ok.filter(x=>Math.abs(x)<=tl).length/ok.length:null;
+  $('topstats').innerHTML=`<span>${isThk()?surf+' thickness':surf} · MAE <b>${fmt(mae,2)} m</b> ${mae==null?'':tick(mae<=tl)} <span class="note">(≤ ${tl} m)</span></span><span>RMSE <b>${fmt(rms,2)} m</b></span><span>bias <b>${fmt(mean,2)} m</b></span><span>within ±${tl} m <b>${within==null?'–':fmt(within*100,0)+' %'}</b></span><span>covered <b>${fmt(ok.length/v.length*100,0)} %</b></span>`;
+  $('rampTopLbl').textContent=`±${lim} m`;$('rampLo').textContent=isThk()?'thinner':'shallower';$('rampHi').textContent=isThk()?'thicker':'deeper';drawRamp($('rampTop'),t=>div((t*2-1)*lim,lim));
+  return T}
+let Ttop=null;
+function itemsTop(){const P=D.maps.polys,v=mapVals(),o=[];for(let n=0,i=0;i<P.length;i+=8,n++){const cx=(P[i]+P[i+2]+P[i+4]+P[i+6])/4,cy=(P[i+1]+P[i+3]+P[i+5]+P[i+7])/4;o.push({x:cx,y:cy,html:`${isThk()?surf+' thickness':surf}<br>error ${v[n]==null?'not covered':fmt(v[n],1)+' m'}`})}return o}
+let itemsTopCache=null;
+
+// ---- S4 dot plot ----
+function drawDots(){const S4=R.stages.STRUCT;if(!S4||!S4.info.picks)return;const cv=$('dots');const{g,w,h}=setupCanvas(cv);const rows=SURF,L=40,x0=110,x1=w-16,rh=(h-26)/rows.length;
+  const X=v=>x0+(Math.max(-L,Math.min(L,v))+L)/(2*L)*(x1-x0);
+  g.fillStyle=css('--neutral');g.fillRect(X(-D.tau.depth_m),4,X(D.tau.depth_m)-X(-D.tau.depth_m),h-26);
+  g.strokeStyle=css('--grid');g.lineWidth=1;g.font='11px IBM Plex Mono, monospace';g.fillStyle=css('--muted');
+  for(const t of[-40,-20,-10,0,10,20,40]){g.beginPath();g.moveTo(X(t),4);g.lineTo(X(t),h-22);g.stroke();g.fillText((t>0?'+':'')+t,X(t)-8,h-8)}
+  g.fillStyle=css('--ink2');g.font='12px IBM Plex Sans, sans-serif';rows.forEach((r,i)=>g.fillText(r,6,8+rh*(i+.5)));
+  const items=[];S4.info.picks.forEach((p,j)=>{const i=rows.indexOf(p.surface);if(i<0)return;const y=4+rh*(i+.5)+((j%5)-2)*3;
+    if(p.residual==null){return}const x=X(p.residual),out=Math.abs(p.residual)>L;
+    g.beginPath();g.arc(x,y,4.5,0,7);g.fillStyle=css('--ink');g.globalAlpha=.85;g.fill();g.globalAlpha=1;g.lineWidth=2;g.strokeStyle=css('--panel');g.stroke();
+    if(out){g.fillStyle=css('--crit');g.fillText(p.residual>0?'›':'‹',x+(p.residual>0?6:-12),y+4)}
+    items.push({px:x,py:y,html:`${p.well} · ${p.surface}<br>grid − pick ${fmt(p.residual,1)} m`})});
+  cv.onmousemove=e=>{const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;let b=null,bd=1e9;for(const it of items){const d=(it.px-mx)**2+(it.py-my)**2;if(d<bd){bd=d;b=it}}if(b&&bd<100)showTip(e,b.html);else hideTip()};cv.onmouseleave=hideTip}
+
+// ---- S2 fault map + table ----
+function drawFaults(){const cv=$('mapF');const{g,w,h}=setupCanvas(cv);const T=mapXform(w,h);footprint(g,T,css('--grid'));
+  const F=D.faults,r=F.ref,c=F.cand;g.fillStyle=css('--ref');g.globalAlpha=.55;for(let i=0;i<r.length;i+=4)g.fillRect(T.X(r[i])-1,T.Y(r[i+1])-1,2,2);g.globalAlpha=1;
+  for(let i=0;i<c.length;i+=4){g.fillStyle=rgb(ramp(SEQ_O,c[i+3]/300));g.fillRect(T.X(c[i])-1.5,T.Y(c[i+1])-1.5,3,3)}
+  scaleBar(g,T,w,h);return T}
+function faultTable(){const F=D.faults.per_fault;const S2=R.stages.FLT;if(S2&&!S2.overt)$('fltstats').innerHTML=Object.values(S2.metrics).map(m=>`<span>${m.label} <b>${mval(m.value,m)}</b> ${m.primary?tick(m.pass):''}</span>`).join('')+`<span class="note" style="flex-basis:100%">${S2.info.matched}/${S2.info.reference_faults} reference faults matched one-to-one (${S2.info.rule}).</span>`;$('ftab').innerHTML=`<thead><tr><th>Reference fault</th><th class="n">points</th><th>found ≤100 m</th><th class="n">median dist.</th></tr></thead><tbody>`+
+  F.map(f=>`<tr><td>${f.name}</td><td class="n">${f.n}</td><td><div class="bar" title="${fmt(f.recall*100,0)} %"><span style="width:${f.recall*100}%"></span></div></td><td class="n">${f.median==null?'–':fmt(f.median,0)+' m'}</td></tr>`).join('')+'</tbody>'}
+
+// ---- S3 horizon map ----
+function drawHz(){const cv=$('mapH');const{g,w,h}=setupCanvas(cv);const T=mapXform(w,h);footprint(g,T,css('--grid'));const H=D.horizon,hp=hatch(g),sz=Math.max(1.5,H.cell*2*T.s);
+  for(let i=0;i<H.x.length;i++){const c=div(H.d[i],45);g.fillStyle=c?rgb(c):hp;g.fillRect(T.X(H.x[i])-sz/2,T.Y(H.y[i])-sz/2,sz,sz)}
+  scaleBar(g,T,w,h);const S3=R.stages.HZ;
+  $('hzstats').innerHTML=S3?Object.values(S3.metrics).map(m=>`<span>${m.label} <b>${mval(m.value,m)}</b> ${m.primary?tick(m.pass):''} <span class="note">${mtol(m)}</span></span>`).join('')+(S3.outcome==='silent_failure'?'<div class="note" style="flex-basis:100%">Silent failure: the candidate covers too little of the reservoir, or misses by more than 3× the tolerance.</div>':''):'';return T}
+
+// ---- S6 histograms ----
+let prop='PORO';
+function drawHists(){const H=D.hist[prop],box=$('hists');box.innerHTML='';const S6=R.stages.PETRO;
+  const figs=Object.entries(H.zones).map(([zn,v])=>{const f=document.createElement('figure');const wd=prop==='PORO'&&S6&&S6.info.wasserstein_poro?S6.info.wasserstein_poro[zn]:null;
+    f.innerHTML=`<figcaption>${zn} ${wd==null?'':`<span class="note">Wasserstein ${fmt(wd,4)}</span>`}</figcaption><div class="map"><canvas data-h="0.55"></canvas></div>`;box.appendChild(f);return[zn,v,f]});
+  figs.forEach(([zn,v,f])=>{
+    const cv=f.querySelector('canvas');const{g,w,h}=setupCanvas(cv);const n=v.ref.length,m=Math.max(...v.ref,...v.cand,1e-9),X=i=>28+i/n*(w-36),Y=y=>h-18-y/m*(h-26);
+    g.strokeStyle=css('--grid');g.beginPath();g.moveTo(28,h-18);g.lineTo(w-8,h-18);g.stroke();g.fillStyle=css('--muted');g.font='10px IBM Plex Mono, monospace';g.fillText(H.lo,24,h-5);g.fillText(H.hi,w-24,h-5);
+    for(const[k,col]of[['ref','--ref'],['cand','--cand']]){g.strokeStyle=css(col);g.lineWidth=2;g.beginPath();v[k].forEach((y,i)=>{if(i===0)g.moveTo(X(i),Y(y));else g.lineTo(X(i),Y(y));g.lineTo(X(i+1),Y(y))});g.stroke()}
+    cv.onmousemove=e=>{const r=cv.getBoundingClientRect(),i=Math.floor((e.clientX-r.left-28)/(w-36)*n);if(i<0||i>=n){hideTip();return}const lo=H.lo+(H.hi-H.lo)*i/n,hi=H.lo+(H.hi-H.lo)*(i+1)/n;
+      showTip(e,`${zn} · ${fmt(lo,2)}–${fmt(hi,2)}<br>reference ${fmt(v.ref[i]*100,1)} %<br>candidate ${fmt(v.cand[i]*100,1)} %`)};cv.onmouseleave=hideTip})}
+
+// ---- petrophysics crossplot ----
+function drawXplot(){const P=R.stages.PETRO;if(!P||P.overt)return;const W=P.info.well_samples,cv=$('xplot');const{g,w,h}=setupCanvas(cv);const lo=0.05,hi=0.36,pad=36;
+  const X=v=>pad+(v-lo)/(hi-lo)*(w-pad-10),Y=v=>h-pad+6-(v-lo)/(hi-lo)*(h-pad-6);
+  g.strokeStyle=css('--grid');g.lineWidth=1;g.font='10px IBM Plex Mono, monospace';g.fillStyle=css('--muted');
+  for(const t of[0.1,0.2,0.3]){g.beginPath();g.moveTo(X(t),Y(lo));g.lineTo(X(t),Y(hi));g.stroke();g.beginPath();g.moveTo(X(lo),Y(t));g.lineTo(X(hi),Y(t));g.stroke();g.fillText(t.toFixed(1),X(t)-8,h-pad+20);g.fillText(t.toFixed(1),4,Y(t)+3)}
+  g.fillText('reference φ',w/2-30,h-4);g.save();g.translate(10,h/2+30);g.rotate(-Math.PI/2);g.fillText('candidate φ',0,0);g.restore();
+  g.strokeStyle=css('--ink2');g.setLineDash([4,4]);g.beginPath();g.moveTo(X(lo),Y(lo));g.lineTo(X(hi),Y(hi));g.stroke();g.setLineDash([]);
+  g.fillStyle=css('--cand');g.globalAlpha=.55;for(let i=0;i<W.ref.length;i++){if(W.cand[i]==null)continue;g.beginPath();g.arc(X(W.ref[i]),Y(W.cand[i]),2.5,0,7);g.fill()}g.globalAlpha=1;
+  $('petrostats').innerHTML=Object.values(P.metrics).map(m=>`<span>${m.label} <b>${mval(m.value,m)}</b> ${m.primary?tick(m.pass):''} <span class="note">${m.primary?mtol(m):''}</span></span>`).join('')+`<div class="note" style="flex-basis:100%">Truth = ${P.info.truth}.</div>`}
+
+// ---- facies ----
+function drawFacies(){const F=R.stages.FAC;if(!F||F.overt){$('factab').innerHTML=F?`<tr><td>${F.overt}</td></tr>`:'';return}
+  const W=180,X=v=>Math.round(v*W);
+  $('factab').innerHTML=`<thead><tr><th>Zone</th><th>Code</th><th>Candidate within realization P10–P90</th><th class="n">cand.</th><th class="n">P10–P90</th><th class="n">outside</th></tr></thead><tbody>`+
+    F.info.table.map(r=>`<tr><td>${r.zone}</td><td>${r.code}</td><td><svg width="${W}" height="12" role="img" aria-label="range"><rect x="0" y="5" width="${W}" height="2" fill="var(--grid)"/><rect x="${X(r.p10)}" y="2" width="${Math.max(2,X(r.p90)-X(r.p10))}" height="8" rx="2" fill="var(--ref)" opacity=".45"/><circle cx="${X(r.candidate)}" cy="6" r="4" fill="var(--cand)" stroke="var(--panel)" stroke-width="2"/></svg></td><td class="n">${fmt(r.candidate*100,1)}%</td><td class="n">${fmt(r.p10*100,0)}–${fmt(r.p90*100,0)}%</td><td class="n">${r.outside>0?fmt(r.outside*100,1)+'%':'–'}</td></tr>`).join('')+'</tbody>';
+  $('facnote').textContent=F.info.pending}
+
+// ---- connectivity ----
+function drawConn(){const C=R.stages.CONN;if(!C||C.overt)return;const i=C.info;
+  $('connstats').innerHTML=Object.values(C.metrics).map(m=>`<span>${m.label} <b>${mval(m.value,m)}</b> ${m.primary?tick(m.pass):''} <span class="note">${m.primary?mtol(m):''}</span></span>`).join('')+
+  `<span>Compartments holding > 1 % of pore volume · reference <b>${i.compartments_over_1pct_pv.reference}</b> · candidate <b>${i.compartments_over_1pct_pv.candidate}</b></span><span>Well pairs compared <b>${i.well_pairs}</b> (separated in reference: <b>${i.reference_separated_pairs}</b>)</span><div class="note" style="flex-basis:100%">${i.rule}.</div>`}
+
+// ---- S7 volumes ----
+function drawVol(){const S7=R.stages.VOL;const rows=(S7.info.table||[]).filter(r=>r.stoiip_ref>0.001);const cv=$('volbars');const{g,w,h}=setupCanvas(cv);
+  const L=0.3,x0=130,x1=w-60,rh=(h-24)/Math.max(rows.length,1),X=v=>x0+(Math.max(-L,Math.min(L,v))+L)/(2*L)*(x1-x0);
+  g.fillStyle=css('--neutral');g.fillRect(X(-0.05),2,X(0.05)-X(-0.05),h-24);g.strokeStyle=css('--grid');g.font='11px IBM Plex Mono, monospace';
+  for(const t of[-0.3,-0.15,-0.05,0,0.05,0.15,0.3]){g.beginPath();g.moveTo(X(t),2);g.lineTo(X(t),h-22);g.stroke();g.fillStyle=css('--muted');g.fillText((t>0?'+':'')+Math.round(t*100)+'%',X(t)-12,h-8)}
+  const items=[];rows.forEach((r,i)=>{const e=r.stoiip_c/r.stoiip_ref-1,y=2+rh*i+rh*.2,bh=rh*.6;const c=div(e,0.15);g.fillStyle=rgb(c||hx(css('--neutral')));
+    const a=X(0),b=X(e);g.beginPath();g.roundRect(Math.min(a,b),y,Math.max(2,Math.abs(b-a)),bh,2);g.fill();
+    g.fillStyle=css('--ink2');g.font='12px IBM Plex Sans, sans-serif';g.fillText(`${r.zone} · reg ${r.eqlnum}`,6,y+bh*.75);g.font='11px IBM Plex Mono, monospace';g.fillStyle=css('--ink');g.fillText((e>0?'+':'')+fmt(e*100,1)+'%',x1+6,y+bh*.75);
+    items.push({y0:y,y1:y+bh,html:`${r.zone} · EQLNUM ${r.eqlnum}<br>STOIIP ref ${fmt(r.stoiip_ref,2)} · cand ${fmt(r.stoiip_c,2)} MSm³`})});
+  cv.onmousemove=e=>{const rr=cv.getBoundingClientRect(),my=e.clientY-rr.top,it=items.find(t=>my>=t.y0-2&&my<=t.y1+2);if(it)showTip(e,it.html);else hideTip()};cv.onmouseleave=hideTip;
+  const tot=S7.info.stoiip_1e6_sm3;$('voltab').innerHTML=`<thead><tr><th>Zone</th><th class="n">EQL</th><th class="n">STOIIP ref</th><th class="n">cand</th><th class="n">Δ</th></tr></thead><tbody>`+
+    (S7.info.table||[]).map(r=>`<tr><td>${r.zone}</td><td class="n">${r.eqlnum}</td><td class="n">${fmt(r.stoiip_ref,2)}</td><td class="n">${fmt(r.stoiip_c,2)}</td><td class="n">${r.stoiip_ref>0?fmt((r.stoiip_c/r.stoiip_ref-1)*100,1)+'%':'–'}</td></tr>`).join('')+
+    `<tr><td><b>Field</b></td><td></td><td class="n"><b>${fmt(tot.reference,2)}</b></td><td class="n"><b>${fmt(tot.candidate,2)}</b></td><td class="n"><b>${fmt((tot.candidate/tot.reference-1)*100,1)}%</b></td></tr></tbody>`}
+
+// ---- 3D grid ----
+let three=null;
+function initThree(){const G=D.grid,{NX,NY,NZ}=G,NC=NX*NY*NZ;const dec=(s,T)=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new T(u.buffer)};
+  const zc=dec(G.zcorn,Uint16Array),coord=dec(G.coord,Float32Array),act=dec(G.act,Uint8Array),err=dec(G.err,Int16Array);
+  const cid=(i,j,k)=>(k*NY+j)*NX+i;const CP=new Float32Array(NC*24);let zmin=1e9,zmax=-1e9;
+  for(let k=0;k<NZ;k++)for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const c=cid(i,j,k);if(!act[c])continue;
+    for(let n=0;n<8;n++){const a=n&1,b=(n>>1)&1,t=(n>>2)&1,z=G.z0+zc[((2*k+t)*2*NY+2*j+b)*2*NX+2*i+a]/10,p=((j+b)*(NX+1)+(i+a))*6,z1=coord[p+2],z2=coord[p+5],f=(z-z1)/((z2-z1)||1),o=(c*8+n)*3;
+      CP[o]=coord[p]+f*(coord[p+3]-coord[p]);CP[o+1]=coord[p+1]+f*(coord[p+4]-coord[p+1]);CP[o+2]=z;if(z<zmin)zmin=z;if(z>zmax)zmax=z}}
+  const cv=$('c3'),Rn=new THREE.WebGLRenderer({canvas:cv,antialias:true});Rn.setPixelRatio(Math.min(2,devicePixelRatio));
+  const scene=new THREE.Scene();scene.background=new THREE.Color(0x0d1013);const cam=new THREE.PerspectiveCamera(35,1.4,1,5000);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x40464c,0.8));const dl=new THREE.DirectionalLight(0xffffff,0.5);dl.position.set(-0.6,1,0.4);scene.add(dl);
+  const ctl=new THREE.OrbitControls(cam,cv);ctl.enableDamping=true;ctl.screenSpacePanning=true;
+  const S=100;let VE=5;const zmid=(zmin+zmax)/2;const P3=(x,y,z)=>[x/S,-(z-zmid)*VE/S,-y/S];
+  const mat=new THREE.MeshPhongMaterial({vertexColors:true,side:THREE.DoubleSide,flatShading:true,shininess:10,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+  const lmat=new THREE.LineBasicMaterial({color:0x000000,transparent:true,opacity:0.3});
+  const FACES=[[0,2,6,4,-1,0,0],[1,5,7,3,1,0,0],[0,4,5,1,0,-1,0],[2,3,7,6,0,1,0],[0,1,3,2,0,0,-1],[4,6,7,5,0,0,1]];
+  let mesh=null,lines=null,fr=null,fc=null,mode='err';const NOD=[0.42,0.42,0.42];
+  const dpt=(c)=>{let s=0;for(let n=0;n<8;n++)s+=CP[(c*8+n)*3+2];return s/8};
+  function colour(c){if(mode==='depth'){const t=(dpt(c)-zmin)/(zmax-zmin||1);return ramp(['#cde2fb','#5598e7','#1c5cab','#0d366b'],t).map(v=>v/255)}
+    const e=err[c];if(e===-32768)return NOD;const n=hx('#5b5b57');const t=Math.max(-1,Math.min(1,e/10/LIM_D));return(t<0?ramp([...BLUE,'#5b5b57'],1+t):ramp(['#5b5b57',...RED],t)).map(v=>v/255)}
+  function rebuild(){const k0=+$('k0').value-1,k1=+$('k1').value-1,lo=Math.min(k0,k1),hi=Math.max(k0,k1);$('kv').textContent=(lo+1)+'–'+(hi+1);
+    const vis=new Uint8Array(NC);for(let k=lo;k<=hi;k++)for(let c=k*NX*NY;c<(k+1)*NX*NY;c++)if(act[c])vis[c]=1;
+    const pos=[],col=[],lp=[];let nf=0;
+    for(let k=lo;k<=hi;k++)for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const c=cid(i,j,k);if(!vis[c])continue;const rgbc=colour(c);
+      for(const[q0,q1,q2,q3,di,dj,dk]of FACES){const ni=i+di,nj=j+dj,nk=k+dk;if(!(ni<0||nj<0||nk<0||ni>=NX||nj>=NY||nk>=NZ||!vis[cid(ni,nj,nk)]))continue;
+        const V=[q0,q1,q2,q3].map(q=>{const o=(c*8+q)*3;return P3(CP[o],CP[o+1],CP[o+2])});for(const t of[0,1,2,0,2,3]){pos.push(...V[t]);col.push(...rgbc)}
+        for(const[a,b]of[[0,1],[1,2],[2,3],[3,0]])lp.push(...V[a],...V[b]);nf++}}
+    [mesh,lines,fr,fc].forEach(o=>{if(o){scene.remove(o);o.geometry.dispose()}});
+    let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));mesh=new THREE.Mesh(g,mat);scene.add(mesh);
+    g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(lp,3));lines=new THREE.LineSegments(g,lmat);lines.visible=$('edges').checked;scene.add(lines);
+    if(D.faults){const pts=(a,colr)=>{const p=[];for(let i=0;i<a.length;i+=4)p.push(...P3(a[i]-G.ox,a[i+1]-G.oy,a[i+2]));const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(p,3));return new THREE.Points(gg,new THREE.PointsMaterial({color:colr,size:3,sizeAttenuation:false}))};
+      fr=pts(D.faults.ref,0x5598e7);fr.visible=$('f-ref').checked;scene.add(fr);fc=pts(D.faults.cand,0xeb6834);fc.visible=$('f-cand').checked;scene.add(fc)}
+    $('hud').textContent=`${nf.toLocaleString('en-US')} faces · error coverage ${fmt(G.err_coverage*100,0)} % · VE ${VE}×`;draw()}
+  function fit(){mesh.geometry.computeBoundingSphere();const s=mesh.geometry.boundingSphere;if(!s||!isFinite(s.radius))return;const v=new THREE.Vector3(0.85,0.55,0.95).normalize(),dist=s.radius/Math.sin(THREE.MathUtils.degToRad(17.5))*0.85;
+    ctl.target.copy(s.center);cam.position.copy(s.center).addScaledVector(v,dist);cam.near=dist/100;cam.far=dist*10;cam.updateProjectionMatrix();ctl.update();draw()}
+  function draw(){Rn.render(scene,cam)}
+  function resize(){const w=cv.clientWidth||700,h=Math.round(w/(16/11));Rn.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();draw()}
+  new ResizeObserver(resize).observe(cv.parentElement);ctl.addEventListener('change',draw);(function loop(){ctl.update();requestAnimationFrame(loop)})();
+  let tmr;const later=()=>{clearTimeout(tmr);tmr=setTimeout(rebuild,60)};
+  ['k0','k1'].forEach(id=>$(id).oninput=later);$('ve').oninput=e=>{VE=+e.target.value;$('vev').textContent=VE+'×';later()};
+  $('edges').onchange=e=>{lines.visible=e.target.checked;draw()};$('f-ref').onchange=e=>{if(fr){fr.visible=e.target.checked;draw()}};$('f-cand').onchange=e=>{if(fc){fc.visible=e.target.checked;draw()}};
+  document.querySelectorAll('#colorby button').forEach(b=>b.onclick=()=>{mode=b.dataset.c;document.querySelectorAll('#colorby button').forEach(o=>o.setAttribute('aria-pressed',o===b));lg3d();rebuild()});
+  function lg3d(){$('lg3d').innerHTML=mode==='err'?`<span>shallower</span><span class="lg"><i class="sw" style="background:linear-gradient(90deg,#104281,#9ec5f4)"></i></span><span class="lg"><i class="sw" style="background:#5b5b57"></i>0</span><span class="lg"><i class="sw" style="background:linear-gradient(90deg,#f2a6a5,#8a1f1f)"></i></span><span>deeper · ±${LIM_D} m</span><span class="lg"><i class="sw" style="background:#6b6b6b"></i>no reference cell nearby</span>`:`<span>${Math.round(zmin)} m</span><span class="lg"><i class="sw" style="width:120px;background:linear-gradient(90deg,#cde2fb,#0d366b)"></i></span><span>${Math.round(zmax)} m TVDSS</span>`}
+  lg3d();resize();rebuild();fit();
+  if(G.offset_m>1000){$('banner').hidden=false;$('banner').textContent=`Candidate grid sits ${fmt(G.offset_m/1000,0)} km from the reference footprint — depth error is undefined (silent failure).`}
+}
+
+// ---- assemble ----
+function renderAll(){
+  if(D.grid){$('sec-struct').hidden=false;
+    EXT=(()=>{const P=D.maps.polys;let a=1e9,b=-1e9,c=1e9,d=-1e9;for(let i=0;i<P.length;i+=2){a=Math.min(a,P[i]);b=Math.max(b,P[i]);c=Math.min(c,P[i+1]);d=Math.max(d,P[i+1])}return[a,b,c,d]})();
+    const sel=$('surfsel');if(!sel.children.length){sel.innerHTML='<span style="padding:3px 6px;font-size:.72rem;color:var(--muted)">top</span>'+SURF.map(s=>`<button data-s="${s}" aria-pressed="${s===surf}">${s.replace(' top','').replace('Tilje base','Base')}</button>`).join('')+'<span style="padding:3px 6px;font-size:.72rem;color:var(--muted);border-left:1px solid var(--line)">thickness</span>'+THK.map(s=>`<button data-s="${s}" aria-pressed="false">${s}</button>`).join('');
+      sel.querySelectorAll('button').forEach(b=>b.onclick=()=>{surf=b.dataset.s;sel.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed',o===b));itemsTopCache=null;Ttop=drawTop()})}
+    Ttop=drawTop();hoverable($('mapTop'),()=>itemsTopCache||(itemsTopCache=itemsTop()),()=>Ttop);
+    drawDots();
+    if(D.hist&&D.hist.PORO){$('sec-props').hidden=false;drawHists();drawXplot()}
+    if(R.stages.VOL&&!R.stages.VOL.overt){$('sec-vol').hidden=false;drawVol()}
+    if(R.stages.FAC){$('sec-fac').hidden=false;drawFacies()}
+    if(R.stages.CONN&&!R.stages.CONN.overt){$('sec-conn').hidden=false;drawConn()}
+    if(!three){three=true;initThree()}}
+  if(!EXT&&D.faults){const r=D.faults.ref;let a=1e9,b=-1e9,c=1e9,d=-1e9;for(let i=0;i<r.length;i+=4){a=Math.min(a,r[i]);b=Math.max(b,r[i]);c=Math.min(c,r[i+1]);d=Math.max(d,r[i+1])}EXT=[a,b,c,d]}
+  if(!EXT&&D.horizon){const H=D.horizon;EXT=[Math.min(...H.x),Math.max(...H.x),Math.min(...H.y),Math.max(...H.y)]}
+  if(D.faults&&EXT){$('sec-faults').hidden=false;let Tf=drawFaults();faultTable();drawRamp($('rampF'),t=>ramp(SEQ_O,t));
+    const it=[];const c=D.faults.cand;for(let i=0;i<c.length;i+=4)it.push({x:c[i],y:c[i+1],html:`candidate point<br>${fmt(c[i+2],0)} m TVDSS<br>${fmt(c[i+3],0)} m to reference`});hoverable($('mapF'),()=>it,()=>Tf)}
+  if(D.horizon&&EXT){$('sec-hz').hidden=false;let Th=drawHz();drawRamp($('rampH'),t=>div((t*2-1)*45,45));
+    const it=D.horizon.x.map((x,i)=>({x,y:D.horizon.y[i],html:`ΔT ${D.horizon.d[i]==null?'not covered':fmt(D.horizon.d[i],1)+' ms'}`}));hoverable($('mapH'),()=>it,()=>Th)}
+}
+document.querySelectorAll('#propsel button').forEach(b=>b.onclick=()=>{prop=b.dataset.p;document.querySelectorAll('#propsel button').forEach(o=>o.setAttribute('aria-pressed',o===b));drawHists()});
+renderAll();
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(renderAll,150)});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>

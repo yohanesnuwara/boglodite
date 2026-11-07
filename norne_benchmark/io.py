@@ -213,3 +213,30 @@ def eclipse_faults(path: Path) -> pd.DataFrame:
         if m:
             rows.append((m.group(1), *map(int, m.groups()[1:7]), m.group(8)))
     return pd.DataFrame(rows, columns=["name", "i1", "i2", "j1", "j2", "k1", "k2", "face"])
+
+
+# ── Writing ──────────────────────────────────────────────────────────────────
+def _fmt_block(vals: np.ndarray, fmt: str, per_line: int = 6) -> str:
+    vals = np.asarray(vals).ravel()
+    s = [fmt % v for v in vals]
+    return "\n".join(" ".join(s[i:i + per_line]) for i in range(0, len(s), per_line))
+
+
+def write_grdecl(path: Path, cp: "CornerPoint", actnum: np.ndarray,
+                 props: dict[str, np.ndarray] | None = None) -> None:
+    """Write SPECGRID/COORD/ZCORN/ACTNUM (+ optional properties) as Eclipse ASCII.
+
+    ``actnum`` and properties are (nx, ny, nz) arrays; COORD/ZCORN come from ``cp``.
+    No MAPAXES is written — coordinates are absolute ED50/UTM32N.
+    """
+    ny1, nx1, _ = cp.coord.shape
+    nz = cp.zcorn.shape[0]
+    nx, ny = nx1 - 1, ny1 - 1
+    ecl = lambda a: np.asarray(a).transpose(2, 1, 0).ravel()
+    parts = [f"SPECGRID\n {nx} {ny} {nz} 1 F /\n",
+             "COORD\n" + _fmt_block(cp.coord, "%.3f") + "\n/\n",
+             "ZCORN\n" + _fmt_block(cp.zcorn, "%.3f") + "\n/\n",
+             "ACTNUM\n" + _fmt_block(ecl(actnum).astype(int), "%d", 20) + "\n/\n"]
+    for name, arr in (props or {}).items():
+        parts.append(f"{name}\n" + _fmt_block(ecl(arr), "%.6g") + "\n/\n")
+    Path(path).write_text("".join(parts))

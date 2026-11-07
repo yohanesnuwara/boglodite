@@ -1,0 +1,70 @@
+<title>Norne Benchmark Leaderboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--page:#f9f9f7;--panel:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#7b7a75;--line:#e3e2dd;--grid:#ecebe7;--accent:#2a78d6;
+  --good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--page:#0d0d0d;--panel:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#8d8c85;--line:#2c2c2a;--grid:#262624;--accent:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;--page:#0d0d0d;--panel:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#8d8c85;--line:#2c2c2a;--grid:#262624;--accent:#3987e5}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;padding-inline:max(16px,env(safe-area-inset-left,0px));padding-block:18px 40px}
+.wrap{max-width:1280px;margin:0 auto}
+h1{font-size:1.35rem;font-weight:600;margin:0 0 4px}
+.sub{color:var(--ink2);font-size:.85rem;max-width:95ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:.76rem;color:var(--ink2);margin:12px 0}
+.ramp{display:inline-block;width:160px;height:10px;border-radius:2px;background:linear-gradient(90deg,#cde2fb,#86b6ef,#3987e5,#1c5cab,#0d366b)}
+.st{display:inline-flex;align-items:center;gap:4px}
+.st i{font-style:normal;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;font-size:.66rem;color:#fff;font-weight:700}
+.st.correct i{background:var(--good)}.st.degraded i{background:var(--warn);color:#1a1a19}.st.silent_failure i{background:var(--crit)}.st.overt_failure i{background:var(--serious);color:#1a1a19}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:separate;border-spacing:2px;width:100%;font-variant-numeric:tabular-nums}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:8px 8px 4px;white-space:nowrap;cursor:pointer;user-select:none}
+th[aria-sort] {color:var(--ink)}
+td{padding:6px 8px;font-size:.82rem;white-space:nowrap}
+td.run{font-family:var(--mono);font-size:.8rem}
+td.cell{text-align:center;border-radius:3px;min-width:74px;font-family:var(--mono)}
+td.cell .st{margin-left:4px;vertical-align:-2px}
+td.na{color:var(--muted);text-align:center;background:repeating-linear-gradient(45deg,transparent 0 4px,var(--grid) 4px 6px);border-radius:3px}
+.comp{display:flex;align-items:center;gap:8px;font-family:var(--mono)}
+.comp .bar{width:120px;height:8px;border-radius:2px;background:var(--grid);position:relative}
+.comp .bar span{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+tr:hover td.run{color:var(--accent)}
+.note{font-size:.76rem;color:var(--muted);margin-top:10px}
+a{color:var(--accent)}
+.tip{position:fixed;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:.76rem;font-family:var(--mono);box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:9}
+[hidden]{display:none!important}
+</style>
+<div class="wrap">
+  <h1>Norne benchmark · leaderboard</h1>
+  <div id="banner" hidden style="display:inline-block;margin:6px 0 8px;padding:4px 10px;border-radius:4px;background:var(--warn);color:#1a1a19;font-weight:600;font-size:.85rem"></div>
+  <div class="sub">Every scored run under <code id="root"></code>. Cell = primary checks passed in that stage, shaded by stage score; the icon is the outcome class. Click a run for its visual report; click a column header to sort.</div>
+  <div class="legend"><span>stage score</span><span>0</span><span class="ramp"></span><span>1</span>
+    <span class="st correct"><i>✓</i>correct</span><span class="st degraded"><i>◐</i>degraded</span><span class="st silent_failure"><i>!</i>silent failure</span><span class="st overt_failure"><i>✕</i>overt failure</span>
+    <span>hatched = stage not submitted</span></div>
+  <div class="tablewrap"><table id="tbl"></table></div>
+  <div class="note">Composite = importance-weighted mean of stage scores (very high = 3, high = 2), used only for ranking; the checks column is the plain-language result. Contains reference-derived numbers — keep outside agent workspaces.</div>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script>window.BOARD=__DATA__;</script>
+<script>
+(function(){
+const B=window.BOARD,$=id=>document.getElementById(id);$('root').textContent=B.root;
+const ST=['HZ','FLT','STRUCT','STRAT','FAC','PETRO','VOL','CONN'],NAME={HZ:'Horizons',FLT:'Faults',STRUCT:'Structure',STRAT:'Stratigraphy',FAC:'Facies',PETRO:'Petrophysics',VOL:'Volumes',CONN:'Connectivity'};
+if(B.title){const b=document.getElementById('banner');b.textContent=B.title;b.hidden=false}
+const ICON={correct:'✓',degraded:'◐',silent_failure:'!',overt_failure:'✕'};
+const RAMP=['#cde2fb','#86b6ef','#3987e5','#1c5cab','#0d366b'];
+const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function shade(t){t=Math.max(0,Math.min(1,t))*(RAMP.length-1);const i=Math.min(RAMP.length-2,Math.floor(t)),f=t-i,a=hx(RAMP[i]),b=hx(RAMP[i+1]);return a.map((v,k)=>Math.round(v+(b[k]-v)*f))}
+let sortKey='composite',dir=-1;
+function val(r,k){if(k==='composite')return r.composite;if(k==='checks')return r.checks&&r.checks[1]?r.checks[0]/r.checks[1]:0;if(k==='run')return r.run;const s=r.stages[k];return s?s.score:-1}
+function render(){const runs=[...B.runs].sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);return(x>y?1:x<y?-1:0)*dir});
+  const head=`<thead><tr><th data-k="run">Run</th><th data-k="checks">Checks passed</th><th data-k="composite">Composite</th>${ST.map(s=>`<th data-k="${s}">${NAME[s]}</th>`).join('')}<th>STOIIP cand / ref</th></tr></thead>`;
+  const body=runs.map(r=>{const cells=ST.map(s=>{const d=r.stages[s];if(!d)return'<td class="na">–</td>';const c=shade(d.score),dark=d.score>0.55;
+      return`<td class="cell" style="background:rgb(${c});color:${dark?'#fff':'#0b0b0b'}" data-tip="${r.run} · ${d.name||NAME[s]}<br>${d.passed}/${d.n} checks passed · ${d.outcome.replace('_',' ')}<br>score ${d.score.toFixed(3)}">${d.passed}/${d.n}<span class="st ${d.outcome}"><i>${ICON[d.outcome]}</i></span></td>`}).join('');
+    const h=r.headline.stoiip;return`<tr><td class="run">${r.report?`<a href="${r.report}">${r.run}</a>`:r.run}</td><td style="font-family:var(--mono)">${r.checks&&r.checks[1]?r.checks[0]+' / '+r.checks[1]:'–'}</td><td><div class="comp"><span class="bar"><span style="width:${r.composite*100}%"></span></span>${r.composite.toFixed(3)}</div></td>${cells}<td style="font-family:var(--mono)">${h?`${h.candidate.toFixed(1)} / ${h.reference.toFixed(1)}`:'–'}</td></tr>`}).join('');
+  $('tbl').innerHTML=head+'<tbody>'+body+'</tbody>';
+  $('tbl').querySelectorAll('th[data-k]').forEach(th=>{if(th.dataset.k===sortKey)th.setAttribute('aria-sort',dir<0?'descending':'ascending');th.onclick=()=>{if(sortKey===th.dataset.k)dir=-dir;else{sortKey=th.dataset.k;dir=th.dataset.k==='run'?1:-1}render()}});
+  $('tbl').querySelectorAll('[data-tip]').forEach(td=>{td.onmousemove=e=>{const t=$('tip');t.innerHTML=td.dataset.tip;t.hidden=false;t.style.left=e.clientX+12+'px';t.style.top=e.clientY+12+'px'};td.onmouseleave=()=>$('tip').hidden=true})}
+render();
+})();
+</script>

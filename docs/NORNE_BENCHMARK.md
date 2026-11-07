@@ -1,6 +1,6 @@
 # Norne Static-Modelling Benchmark — Specification (draft v0.2)
 
-Status: **draft** · Owner: Boglodite · Created 2026-11-06 · v0.2 adds baseline results (§10) and corrections from the baseline run
+Status: **draft** · Owner: Boglodite · Created 2026-11-06 · v0.4 (2026-11-07) replaces the stage metrics with geoscience metrics and adds connectivity (§5) · v0.2 adds baseline results (§10) · v0.3 (2026-11-07) adds the scorer (§5.0, §6.5), the saturation-height GIVEN (§7) and corrects the volume sensitivity (§10.5) and the 2003-horizon coverage (§10.3, §11)
 
 This document defines how the Boglodite geomodelling swarm is evaluated against
 the Norne field dataset. It fixes *what agents may see*, *what they are scored
@@ -9,7 +9,7 @@ the contract that every agent, tool, and experiment must respect. Nothing here
 depends on a particular LLM, framework, or agent topology — those are the
 variables under test.
 
-Code: `norne_benchmark/` (readers in `io.py`, baseline in `baseline.py`).
+Code: `norne_benchmark/` (readers/writer in `io.py`, baseline in `baseline.py`, scorer in `score.py`, scorer self-test in `selftest.py`).
 Viewer: `sandbox/norne_viewer.py` → `tmp/norne_3d.html`.
 
 ---
@@ -37,7 +37,7 @@ Raw data is never copied into the repository; tools read from `NORNE_ROOT`.
 | `seismics/` | 4D vintages 2001, 2003, 2004, 2006 (full stack) | SEG-Y, IBM float, IL 970–1290 (321), XL 1300–2300 (1001), 0–4000 ms @ 4 ms, coord scalar −100 |
 | `FAULTS/kseim_r06_faults_depth` | Fault sticks, 2006 interpretation, depth (79 faults, 1,872 sticks) | ASCII `X Y Z code seg <pt><name> ... SSTVD meters`; a new stick starts at pt = 1 |
 | `FAULTS/tral_r06_faults` | Fault sticks, 2006 interpretation, time | same layout, Z in TWT ms; also contains a copy of the kseim depth faults |
-| `horisons/Top_Aare_2003_Time.txt`, `Top_Not_2_2003_Time.txt` | Structural horizons, time | `IL XL X Y Z [flag]`; IL/XL **identical** to SEG-Y numbering; surfaces extend beyond the cube. `Top_Not_2_2003_Time.txt` is **truncated** on this copy (see §11) |
+| `horisons/Top_Aare_2003_Time.txt`, `Top_Not_2_2003_Time.txt` | Structural horizons, time | `IL XL X Y Z [flag]`; IL/XL **identical** to SEG-Y numbering; surfaces extend beyond the cube. `Top_Not_2_2003_Time.txt` is **partial** on this copy — only IL 821–992 and 1549–1558 (see §11) |
 | `horisons/tral+lmig32r06_fxy+Not_2_Fm_Top+...input_geomodel` | Not 2 Fm top used as geomodel input (2006) | same layout; **Z is TWT ms** (values look like metres but are not — verified, §10.3) |
 | `horisons/bosd-4D_OWC-{2001,2003,2004,2006}_OFFICIAL_DEPTH` | 4D-derived OWC surfaces, depth | same layout, metres |
 | `horisons/bosd_*-time` (3 files) | Time twins of the official OWC surfaces | TWT ms; usable as depth-conversion calibration |
@@ -88,7 +88,7 @@ Every file is assigned exactly one tier. The tier table is the leakage contract.
 | Tier | Meaning | Content |
 |---|---|---|
 | **INPUT** | Agents may read | Seismic (all vintages), LAS logs, deviation logs, well headers, checkshots, well time–depth tables, picks of *non-blind* wells (2002 generation), GEOLINK LAS, reports **except** the model-describing reports listed under TRUTH |
-| **GIVEN** | Supplied as fixed parameters, not scored | Fluid contacts and B<sub>o</sub> per region (§2.1), PVT, zonation scheme (zone names and layers per zone), CRS, target grid dimensions 46×112×22 |
+| **GIVEN** | Supplied as fixed parameters, not scored | Fluid contacts and B<sub>o</sub> per region (§2.1), saturation-height function per zone (§7), PVT, zonation scheme (zone names and layers per zone), CRS, target grid dimensions 46×112×22 |
 | **TRUTH** | Hidden; read only by the scorer | Fault sticks (both files), all horizon files, TDQ velocity models, both reservoir-model folders, picks of *blind* wells, `NorneReservoirSimulationModelUpdatedReferenceCase2005.pdf`, `Norne model for atw2013.pdf`, `IO_workshop_2008_-_Updating_the_Norne_Reservoir_Model_with_4D_Data.pdf` |
 
 Rationale for GIVEN: the benchmark measures geomodelling skill. Fluid
@@ -135,69 +135,82 @@ memorised Norne facts. Controls:
 
 ## 5. Stages, artifact contracts, and metrics
 
+### 5.0 Candidate contract (what the scorer reads)
+
+A scored run delivers one directory; every file is optional and each stage is
+scored only if its inputs exist (`norne_benchmark/score.py`):
+
+| File | Content | Stages |
+|---|---|---|
+| `grid.grdecl` | `SPECGRID 46 112 22`, `COORD`, `ZCORN`, `ACTNUM` in absolute ED50/UTM32N (no MAPAXES); `PORO`, `NTG`, `PERMX`, `FACIES` (codes 0/1/3) may be included | structural, stratigraphic, facies, petrophysical, evaluation, connectivity |
+| `props.grdecl` | `PORO`, `NTG`, `PERMX`, `FACIES` if not in `grid.grdecl` | facies, petrophysical, evaluation |
+| `faults.csv` | depth fault sticks: `x, y, z, stick, fault` (TVDSS m, positive down) | fault interpretation |
+| `horizon_not2_time.csv` | Not 2 Fm top in time: `il, xl, twt` (any IL/XL lattice; interpolated onto reference nodes, gaps > 4 lines left uncovered) | seismic horizons |
+| `manifest.json` | run metadata (model, agent pattern, tokens, wall-clock) — copied into the score | — |
+
+Layer *K* of the candidate grid belongs to the zone given by the GIVEN zonation
+(§2.1). Cell ordering is free (e.g. J reversed is fine) — every comparison is in
+X/Y/Z. Candidate cells are assigned to an EQLNUM region by the nearest active
+reference cell in the same layer (≤ 300 m; otherwise no region and no
+hydrocarbons).
+
 Agents exchange **typed artifacts** through the project store (each has id,
 version, producer, provenance, CRS, domain). The scorer reads final versions
 and every per-round snapshot.
 
-| # | Stage / agent | Output artifact | Reference (TRUTH) |
+Stages are scored in the geoscientist's terms. Every metric is a familiar
+quantity in domain units (MAE / RMSE in m or ms, F1, %, R²), judged against a
+stated tolerance and reported as pass ✓ / fail ✗. The 0–1 score derived from it
+exists only to rank runs. Stage weight follows importance (very high = 3, high = 2).
+
+| Stage | Importance | Primary metrics (tolerance) | Compared against (TRUTH) |
 |---|---|---|---|
-| S1 | Seismic conditioning | conditioned SEG-Y cube | — (indirect, via downstream stages) |
-| S2 | Fault interpretation | `FaultSet` — named fault sticks in time and/or depth | `kseim_r06_faults_depth`, `tral_r06_faults` |
-| S3 | Horizon interpretation | `Surface` per horizon, time | `tral+lmig32r06…input_geomodel` (Not 2, 2006), `Top_Aare_2003_Time` |
-| S4 | Well tie & depth conversion | `WellTie` per well; `VelocityModel`; depth `Surface`s / `FaultSet` | checkshots, TD tables, blind-well picks, OWC time/depth twins, TDQ models |
-| S5 | Structural framework & gridding | `CornerPointGrid` (COORD/ZCORN/ACTNUM) + `FaultFaces` | ATW `IRAP_1005.GRDECL` + `FAULT_JUN_05.INC` |
-| S6 | Property modelling | `GridProperty` PORO, NTG, PERMX (FACIES optional) | ATW PETRO; facies from the 10 distinct realizations |
-| S7 | Volumetrics | `VolumeTable` per zone × EQLNUM | ATW reference volumes (§7, §10.5) |
+| **Seismic horizons** | very high | Not 2 Fm top time **MAE ≤ 15 ms**; reservoir area **covered ≥ 90 %** | 2006 Not 2 Fm geomodel-input horizon (TWT) |
+| **Fault interpretation** | very high | **Fault-level F1 ≥ 0.75** (one-to-one matching; a fault matches when ≥ 50 % of each lies within 100 m of the other); **point-level F1 ≥ 0.75** (within 100 m) | 2006 depth fault sticks over the active reservoir (faults ≥ 300 m of stick) |
+| **Structural modelling** | very high | Zone-top **surface MAE ≤ 10 m**; blind-well **pick MAE ≤ 10 m**; **fault throw MAE ≤ 10 m** (every reference and candidate fault face; a missing or spurious fault counts its full throw) | ATW zone-top interfaces; 2002 picks in blind wells; ATW internal fault faces |
+| **Stratigraphic modelling** | high | Zone **thickness MAE ≤ 5 m** (mean of Garn, Ile, Tofte, Tilje); **zone consistency ≥ 99 %** (columns with interfaces in order and no non-positive cells); **pinch-out agreement ≥ 90 %** (zone present/absent where the reference has it) | ATW zone isochores |
+| **Facies modelling** | high | Mean facies **proportion outside the realization P10–P90 ≤ 0.05** per zone and code | 10 distinct facies models among the 120 realizations |
+| **Petrophysical modelling** | very high | Along the blind-well paths: **porosity MAE ≤ 0.02**, **log₁₀ k MAE ≤ 0.3**, **NTG MAE ≤ 0.05**; **R² of zone-average porosity maps ≥ 0.5** | ATW cells penetrated by blind wells (conditioned to their logs); ATW zone-average maps |
+| **Reservoir evaluation** | very high | **Pore-volume, HCPV and STOIIP error within ±5 %** (GIVEN contacts, B<sub>o</sub>, saturation-height) | ATW volumes (§7) |
+| **Reservoir connectivity** | very high | **Compartment agreement ARI ≥ 0.8** (adjusted Rand index of hydrocarbon compartments); **well-pair agreement ≥ 90 %** (each pair of wells connected/separated as in the reference) | ATW static compartments (§5.3) |
 
-### 5.1 Metrics and calibrated tolerances
+Secondary metrics (reported, not scored): RMSE and bias for every MAE, fault
+precision and recall, median fault distance, gross-rock-volume error, HCPV error
+per zone × region, porosity R² along wells, compartment counts.
 
-τ values are calibrated from the baseline (§10): each is set at the level of
-disagreement that already exists between reference sources, so an agent is not
-penalised for error that the truth itself contains. They are frozen before any
-scored run.
+**Why not cell-by-cell F1 or R² for facies and properties against the reference
+model?** The reference properties and facies are one stochastic realization; an
+equally valid realization would score poorly cell by cell (the 120 Norne
+realizations differ from each other that way). Cell-wise comparison is fair only
+where the truth is data — along the blind wells — and otherwise properties are
+compared as smoothed maps and distributions. Facies macro-F1 / balanced accuracy
+/ IoU at the blind wells will be added once facies logs and a code legend are
+established (§11).
 
-| Metric family | Primary metric | τ | Calibration source |
-|---|---|---|---|
-| Depth (S4, S5) | RMS of candidate vs. blind-well 2002 picks | **10 m** | Reference grid vs. 2002 picks: RMS 4.9–6.7 m, P90 8–11 m (§10.2) |
-| Faults (S2, S5) | Symmetric fault-surface distance; recall/precision @ τ | **100 m** | ≈ 1 cell; reference grid faults vs. 2006 sticks: median 48–65 m, 76 % / 68 % within 100 m (§10.4) |
-| Horizons, time (S3) | Median \|ΔT\| on common nodes | **15 ms** | 2006 vs. 2003 interpretation of the same horizon: median \|ΔT\| 11 ms (§10.3) |
-| Volumes (S7) | Relative STOIIP / HCPV error | **5 %** | A 10 m structural shift changes STOIIP by −5.7 % / +0.3 % (§10.5) |
-| Properties (S6) | Per-zone Wasserstein distance of PORO, NTG, log k | to be set | Spread of the 10 facies realizations (§10.6) |
+### 5.1 Tolerances
 
-Detailed metrics:
+Tolerances are set from how much independent truth sources already disagree, so
+an agent is not penalised for error that the truth itself contains: depth 10 m
+(reference grid vs. 2002 picks: RMS 4.9–6.7 m, P90 8–11 m), time 15 ms (2006 vs.
+2003 Not 2 interpretation: median |ΔT| 11 ms), volume 5 % (≈ 8–9 m of structural
+error, §10.5), fault distance 100 m (≈ one cell). Fault F1, thickness, facies,
+property and connectivity tolerances are **provisional** until calibrated.
 
-**S2 Faults** (sticks densified to 10 m; per-fault matching by Hungarian assignment on mean distance)
-- `fault_recall@τ`, `fault_precision@τ`, `fault_mean_dist`, `fault_hd95`, `fault_count_err` (faults intersecting the active reservoir; reference: 62).
-- Robust statistics (median, P90) are primary: the distance distributions are heavy-tailed (§10.4).
+### 5.2 Outcome classes
 
-**S3 Horizons** (resampled to the SEG-Y IL/XL lattice inside the reference outline)
-- `hz_median_abs`, `hz_p90_abs`, `hz_coverage`, `hz_fault_gap_ok`.
+- **correct** — every primary check passes.
+- **degraded** — no primary metric worse than 3× its tolerance, but at least one check fails.
+- **silent failure** — a primary metric worse than 3× its tolerance, or measured on under 50 % of the reference (wrong CRS, Y sign flip, time/depth confusion…). For "≥" metrics, 3× means the shortfall from 1 is three times the allowed shortfall (e.g. F1 < 0.25).
+- **overt failure** — artifact missing, unreadable, or wrong dimensions.
 
-**S4 Well tie / depth conversion**
-- `tie_corr` — normalised cross-correlation synthetic vs. seismic in the reservoir window.
-- `tdr_rms_ms` — candidate time–depth relation vs. checkshots / TD tables.
-- `blind_pick_rms` — depth-converted surfaces at blind-well pick XY vs. blind picks (**key depth metric**).
-- `owc_twin_rms` — depth-converted OWC time twins vs. their official depth surfaces.
+### 5.3 Static connectivity
 
-**S5 Grid**
-- `zone_top_rms` per zone vs. reference ZCORN interfaces; `isochore_rms` per zone.
-- `brv_err` per zone × EQLNUM.
-- `fault_face_recall@τ` vs. reference internal fault faces.
-- `grid_quality` — negative/zero thickness, inverted pillars, twisted cells (non-zero ⇒ overt failure).
-- `pick_misfit_rms` vs. blind-well picks.
-
-**S6 Properties**
-- `poro_wasserstein`, `ntg_wasserstein`, `logk_wasserstein` per zone; `poro_well_mae` at blind-well cells; `variogram_range_err`.
-- `facies_rank` — rank of candidate zone facies proportions among the 10 distinct realizations.
-
-**S7 Volumetrics** (headline)
-- Relative error of BRV, NRV, PV, HCPV, STOIIP per zone × EQLNUM and field total vs. ATW.
-
-### 5.2 Outcome classes (carried over from the F3 rubric)
-
-- **correct** — artifact valid and all primary metrics within τ.
-- **silent_failure** — artifact valid-looking but a primary metric outside 3τ (e.g. wrong CRS, J-axis reversal, sign flip, time/depth confusion — all of which occur in the source data itself, §10).
-- **overt_failure** — artifact missing, unreadable, or fails validity checks.
+Hydrocarbon cells are active cells above their region's WOC. Two cells are
+connected vertically when adjacent in the same column, and laterally when their
+shared face intervals overlap by more than 0.5 m — which includes juxtaposition of
+different layers across a fault. Compartments are the connected components.
+Fault seal (transmissibility multipliers) is not modelled in v0.4; a flow-based
+check with OPM Flow is a later option.
 
 ## 6. Scoring modes
 
@@ -216,10 +229,45 @@ cross-agent review (e.g. the fault agent reviewing the grid) improves the model
 or only churns.
 
 ### 6.4 Composite score
-For each primary metric `m` with tolerance `τ_m`: `s_m = exp(−e_m / τ_m)` ∈ (0, 1].
-Stage score = mean of its primary `s_m`; composite = weighted mean of stage
-scores with weights S2 0.15, S3 0.10, S4 0.15, S5 0.20, S6 0.15, S7 0.25.
-The composite is reported **alongside** stage scores, never instead of them.
+Each primary metric gets a score: exp(−value/tol) for "≤" metrics, exp(−(1−value)/(1−tol))
+for "≥" metrics, so a metric exactly at its tolerance scores e⁻¹ ≈ 0.37. Stage score =
+mean of its primary metric scores; composite = importance-weighted mean of the stages
+submitted. Reports lead with the checks passed; the composite only ranks runs.
+
+### 6.5 Scorer self-test
+
+`uv run --no-sync python -m norne_benchmark.score --selftest` builds eight
+candidates from TRUTH with one controlled defect each and asserts the scorer's
+response (19 checks, all must pass before any agent run is scored):
+
+| Case | Expected | Observed (2026-11-07) |
+|---|---|---|
+| reference itself | S2, S3, S5, S6, S7 = 1.00; S4 = truth-vs-truth ceiling | 1.00 ×5; S4 0.52 (blind-pick RMS 6.6 m); composite 0.928 |
+| structure 10 m deeper | zone-top RMS 10 m, STOIIP ≈ −6 %, BRV unchanged | 10.00 m, −5.95 %, ±0 |
+| Y negated (MAPAXES trap) | silent failure on S4, S5, S7 | silent failure ×3 |
+| J axis reversed, same geometry | identical to reference | identical |
+| porosity −10 % | STOIIP −10 %, S6 degraded, geometry perfect | −10.00 %, poro W = 0.024, S5 1.00 |
+| 10 largest faults removed | recall drops, precision stays | recall 0.61, precision 1.00 |
+| 2003 Not 2 interpretation | median ≈ 11 ms on covered nodes; silent failure on coverage | 10.7 ms; coverage 0.05 → silent failure |
+| malformed files | overt failures | overt ×5 |
+
+Note the composite of the perfect reference is 0.928, not 1.0: S4 compares the
+grid to blind-well picks, and the reference grid itself misses them by 6.6 m.
+That is the ceiling any agent can reach on S4.
+
+### 6.6 Visual reports
+
+`norne_benchmark/report.py` turns a scored run into a self-contained
+`report.html` (scorecards; 3D candidate grid coloured by depth error; zone-top
+error maps; blind-well residual dot plot; fault map and per-fault recall table;
+time-horizon ΔT map; per-zone property histograms; volume error bars), and a
+directory of runs into an `index.html` leaderboard (stage-score heatmap with
+outcome icons, sortable). The self-test writes both for its eight cases under
+`outputs/norne_scores/selftest/`. Reports embed reference-derived data and must
+stay outside agent workspaces.
+
+    uv run --no-sync python -m norne_benchmark.report --candidate DIR
+    uv run --no-sync python -m norne_benchmark.report --index outputs/norne_scores/selftest
 
 ## 7. Reference volumetrics definition
 
@@ -228,12 +276,27 @@ From ATW 2013, per active cell (ACTNUM = 1):
 - `BRV` = xtgeo bulk volume
 - `NRV = BRV · NTG`
 - `PV = NRV · PORO`
-- `HCPV_oil = PV · (1 − SWATINIT)` for cells whose centre depth is below GOC and at or above WOC of their EQLNUM; `HCPV_gas` likewise above GOC
+- `HCPV_oil = PV · (1 − S_w(zone, h))` for cells whose centre depth is below GOC and at or above WOC of their EQLNUM; `HCPV_gas` likewise above GOC
 - `STOIIP = HCPV_oil / B_o(EQLNUM)`
 
-SWATINIT is defined for 99.6 % of oil-zone cells (0.4 % are zero and counted
-as fully oil-saturated). Eclipse's `MINPV 500` deactivation is not applied.
-Volumes are reported per zone × EQLNUM and as field totals.
+**S<sub>w</sub> is a GIVEN saturation-height function**, not a per-cell property:
+for each zone, the PV-weighted mean of the reference SWATINIT in 5 m bins of
+height *h* above the cell's WOC (gaps filled from the nearest bin; S<sub>w</sub> = 1
+below WOC). It is applied identically to reference and candidate, so a candidate
+grid needs no saturation property, and S<sub>w</sub> responds to structural error
+the way a real model does (a cell that moves toward the WOC gets wetter).
+
+| h above WOC (m) | 0–5 | 10–15 | 25–30 | 50–55 | 100–105 | 200–205 |
+|---|---|---|---|---|---|---|
+| Garn | 0.64 | 0.34 | 0.25 | 0.18 | 0.18 | 0.16 |
+| Ile | 0.68 | 0.34 | 0.23 | 0.17 | 0.16 | 0.17 |
+| Tofte | 0.60 | 0.30 | 0.21 | 0.15 | 0.19 | 0.19 |
+| Tilje | 0.66 | 0.32 | 0.23 | 0.21 | 0.21 | 0.21 |
+
+With this function the reference STOIIP is **156.31 × 10⁶ Sm³** (cell-by-cell
+SWATINIT: 156.23, a 0.05 % difference). The scorer uses the saturation-height
+value throughout. Eclipse's `MINPV 500` deactivation is not applied. Volumes are
+reported per zone × EQLNUM and as field totals.
 
 ## 8. Baseline ("ceiling") computation
 
@@ -291,7 +354,9 @@ matches the 2003 Not 2 time horizon (17,132 common nodes, mean +16.4 ms,
 median |ΔT| 11.1 ms, P90 |ΔT| 93.5 ms, std 53.6 ms). Depth comparison against
 the grid therefore requires a velocity model and is part of the S4 oracle test.
 The distribution is heavy-tailed (P90 ≫ median), so S3 uses median
-statistics. Where the tail sits (near faults, at the survey edge) is not yet
+statistics. **Caveat:** the 2003 file on this copy covers only IL 821–992 (and
+1549–1558), so these common nodes all lie in the strip IL 899–992 at the
+north-western end of the reservoir; the 15 ms tolerance rests on that strip. Where the tail sits (near faults, at the survey edge) is not yet
 analysed.
 
 ### 10.4 Faults
@@ -319,11 +384,14 @@ HCPV oil 210.1 · HCPV gas 46.3 (all 10⁶ m³) · **STOIIP 156.2 × 10⁶ Sm³*
 
 (Volumes 10⁶ m³, STOIIP 10⁶ Sm³.) Ile + Tofte in region 5 hold 85 % of the oil.
 
-**Sensitivity:** shifting the structure relative to the contacts changes
-STOIIP by −5.7 % (10 m shallower), −2.7 % (5 m shallower), +0.3 % (5 m deeper)
-and −0.5 % (10 m deeper). Shallower structure moves oil into the gas cap,
-deeper structure moves oil-leg base into water while the gas cap shrinks. This
-asymmetry is why τ<sub>vol</sub> = 5 % pairs with τ<sub>depth</sub> = 10 m.
+**Sensitivity** (corrected in v0.3): shifting the whole structure relative to
+the fixed contacts, with S<sub>w</sub> from the saturation-height function, changes
+STOIIP by **+5.6 % (10 m shallower), +3.0 % (5 m shallower), −3.1 % (5 m deeper)
+and −6.0 % (10 m deeper)** — about 0.6 % per metre. (v0.2 reported an asymmetric
+−5.7 % / −0.5 %; that calculation kept each cell's SWATINIT attached to the cell
+as it moved, carrying the transition zone with the structure, which is not
+physical.) A 5 % volume tolerance therefore corresponds to an 8–9 m structural
+error, consistent with τ<sub>depth</sub> = 10 m.
 
 ### 10.6 Realization ensemble
 - All 120 realizations share the ATW geometry exactly (ZCORN and COORD within 5 mm) once canonicalised: R1 is in ATW ordering; R2–R120 are exported with Y negated and the J axis reversed.
@@ -333,10 +401,11 @@ asymmetry is why τ<sub>vol</sub> = 5 % pairs with τ<sub>depth</sub> = 10 m.
 
 ## 11. Open issues
 
-- **Truncated file:** `horisons/Top_Not_2_2003_Time.txt` on the T7 copy is exactly 26 MiB with a cut-off last record; inlines below 821 are missing. Outside the seismic cube and the active reservoir, so the impact is small — but re-download it from the source release if possible.
+- **Partial file:** `horisons/Top_Not_2_2003_Time.txt` on the T7 copy is exactly 26 MiB with a cut-off last record, and contains only IL 821–992 and 1549–1558 — about 5 % of the reservoir footprint. (v0.2 wrongly said only IL < 821 was lost.) It is not used as S3 truth (the 2006 horizon is complete), but the S3 tolerance calibration rests on the IL 899–992 strip. Re-download it from the source release if possible.
 - **Garn-top pick depths:** for some wells the Garn-top pick TVDSS disagrees with the deviation-log TVDSS at the same MD by 17–31 m RMS (Ile and deeper agree exactly). Find out which is right before Garn picks are used as blind truth.
 - **Checkshots** exist only for two exploration wells; production wells have TD tables. Confirm TD-table provenance before using them as TRUTH vs INPUT.
 - **Canonical seismic vintage:** proposal is 2001 (pre-production baseline) for structure; other vintages for a later 4D stage.
 - **Facies codes** (0/1/3) need a geological legend before S6 facies scoring.
 - **Region 2** (G Garn) has no blind well.
+- **Property tolerances** (S6) are provisional (poro 0.02, NTG 0.05, log k 0.3); calibrate from the facies realizations or log-vs-cell comparisons.
 - **STOIIP check:** 156.2 × 10⁶ Sm³ is close to commonly quoted Norne figures, but has not yet been checked against the 2005 reference-case report on the drive (no PDF reader installed).
