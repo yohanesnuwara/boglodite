@@ -12,6 +12,21 @@ import os
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+
+
+def _load_dotenv(path: Path) -> None:
+    """Load KEY=VALUE lines from the repo's .env (git-ignored) without overriding the environment."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.removeprefix("export ").split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+_load_dotenv(REPO / ".env")
 NORNE_ROOT = Path(os.environ.get("NORNE_ROOT", "/mnt/t7/Dell Inspiron/Local Disk D/Full-Norne"))
 RUNS_DIR = Path(os.environ.get("STRATA_RUNS", REPO / "runs"))
 CACHE_DIR = REPO / "data" / "strata_cache"            # derived INPUT arrays (git-ignored via data/*)

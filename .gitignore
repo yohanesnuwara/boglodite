@@ -21,3 +21,6 @@ evaluation/reproducibility_manifest.json
 tmp
 # Strata run records (kept on disk, not in git)
 runs/
+
+# Secrets
+.env
