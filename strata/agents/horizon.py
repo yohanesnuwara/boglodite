@@ -33,8 +33,12 @@ Workflow:
    another reflector across faults. guide_window_ms bounds how far the horizon may depart from the
    surface through the tied tops. Read the QC: coverage, confidence and JUMPS (neighbouring picks
    > 12 ms apart = cycle skips or faults). Compare alternatives if useful.
-3. fill_and_smooth small gaps (do not fill large areas).
-4. publish_horizon with a short honest summary, then return your result.
+3. repair_deviations: where the picks leave their event (a jump away from faults after which the event
+   fades), seeds are placed on the trend of the trusted picks (confirmed by inline AND crossline
+   re-tracks) and the horizon is re-solved with Viterbi through them. Recommended after tracking.
+   Check the verifier numbers afterwards; it can make things worse where the fault map misses a fault.
+4. fill_and_smooth small gaps (do not fill large areas).
+5. publish_horizon with a short honest summary, then return your result.
 Trade-off to know (measured on this data with input-only checks): with the fault map, Viterbi crosses
 faults using the seismic throw, but only if the true event across the fault lies inside the candidate
 window — a narrow guide_window_ms (≤ 16 ms) keeps the horizon on the smooth well-guide surface, which
@@ -101,6 +105,31 @@ async def track_horizon(ctx: RunContext[RunContext_], polarity: str, method: str
     return ctx.deps.record("track_horizon", ctx.deps.state["working_params"], rep)
 
 
+async def repair_deviations(ctx: RunContext[RunContext_], window_ms: float = 35.0) -> dict:
+    """Find where the working horizon leaves its event and re-track it. A deviation = a > 12 ms jump away
+    from faults after which the event amplitude drops below half of the trusted picks before it. From the
+    last trusted pick the same event (same waveform, same amplitude) is re-tracked along inlines and along
+    crosslines; where both directions agree within 8 ms the re-tracked times become SEEDS, which are
+    added to the tied well points as anchors, and the whole horizon is re-solved with Viterbi (±window_ms
+    around the corrected surface). Compare the verifier numbers before/after; keep the better version."""
+    from strata.tools import repair as RP
+    hz = ctx.deps.state.get("working_horizon")
+    if hz is None:
+        return {"error": "track first"}
+    wp = ctx.deps.state.get("working_params", {})
+    ties = _ties(ctx.deps)
+    ties = ties[ties.in_cube & ties.twt.notna()]
+    wells = [(r.il, r.xl, r.twt + wp.get("bulk_shift_ms", 0.0)) for r in ties.itertuples()]
+    new, rep = RP.retrack_with_seeds(ctx.deps.cube, hz, wells, wp.get("polarity", "trough"),
+                                     fault=ctx.deps.state.get("fault_mask"), window_ms=window_ms)
+    ctx.deps.state["working_horizon"] = new
+    ctx.deps.state["repair_seeds"] = rep.pop("seed_points")
+    ctx.deps.state["working_params"] = {**wp, "deviation_repair": True, "repair_window_ms": window_ms}
+    out = {"deviation_repair": rep["deviation_repair"], "coverage": rep.get("coverage"),
+           "jumps_frac": rep.get("jumps_frac"), "seeds_used": len(ctx.deps.state["repair_seeds"])}
+    return ctx.deps.record("repair_deviations", {"window_ms": window_ms}, out)
+
+
 async def fill_and_smooth(ctx: RunContext[RunContext_], max_gap_traces: int = 4, smooth: int = 0) -> dict:
     """Fill holes up to max_gap_traces wide in the working horizon; optional median smoothing (odd size)."""
     hz = ctx.deps.state.get("working_horizon")
@@ -143,24 +172,17 @@ def _spread_seeds(snapped, k: int = 3) -> list[str]:
 
 
 def build(model_spec: str, name: str, rework: bool = False) -> Agent:
-    def seeds(R):
-        rep = tool_return(R, "seed_report") or {}
-        wells = [w["well"] for w in rep.get("wells", [])]
-        if rework:
-            return wells                                    # scripted fix: seed from every tied well
-        import pandas as pd
-        return _spread_seeds(pd.DataFrame(rep.get("wells", [])), 3)
-
     def track_args(R):
         sr = tool_return(R, "seed_report") or {}
         pol = sr.get("expected_event_from_well_tie") or sr.get("polarity", {}).get("suggested", "peak")
         return {"polarity": pol, "method": "viterbi", "guide_window_ms": 35.0}
 
-    p = plan([("seed_report", {}), ("track_horizon", track_args), ("fill_and_smooth", {"max_gap_traces": 4}),
+    p = plan([("seed_report", {}), ("track_horizon", track_args), ("repair_deviations", {}),
+              ("fill_and_smooth", {"max_gap_traces": 4}),
               ("publish_horizon", {"name": name, "summary": "Scripted track: suggested polarity, default parameters."})],
              lambda R: {"horizon_object": (tool_return(R, "publish_horizon") or {}).get("published", ""),
                         "summary": "scripted", "polarity": track_args(R)["polarity"], "seed_wells": [],
                         "params": {}})
     return Agent(make_model(model_spec, p), deps_type=RunContext_, output_type=HorizonResult,
-                 instructions=INSTRUCTIONS, tools=[seed_report, track_horizon, fill_and_smooth, publish_horizon],
+                 instructions=INSTRUCTIONS, tools=[seed_report, track_horizon, repair_deviations, fill_and_smooth, publish_horizon],
                  name="horizon_agent")
