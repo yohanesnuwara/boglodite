@@ -1,0 +1,365 @@
+<title>Norne Reference Model</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#eef0ef;--panel:#ffffff;--fg:#1b2024;--muted:#5d6871;--line:#d5dad8;--accent:#1d6f74;--warn:#a8641a;--view:#0c1013;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121518;--panel:#1a1e22;--fg:#e4e7e5;--muted:#97a2aa;--line:#2b3238;--accent:#4fb3b8;--warn:#e0a94a;--view:#07090b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121518;--panel:#1a1e22;--fg:#e4e7e5;--muted:#97a2aa;--line:#2b3238;--accent:#4fb3b8;--warn:#e0a94a;--view:#07090b;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.45;padding-inline:max(12px,env(safe-area-inset-left,0px));padding-block:12px 24px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:10px}
+h1{font-size:1.35rem;font-weight:600;margin:0;letter-spacing:-.01em}
+.facts{font-family:var(--mono);font-size:.76rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+.facts b{color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:250px minmax(0,1fr) 290px;gap:10px;align-items:start}
+@media(max-width:1100px){.app{grid-template-columns:minmax(0,1fr)}}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:4px;min-width:0}
+.ph{padding:7px 10px;border-bottom:1px solid var(--line);font-size:.7rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.sec{padding:9px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.sec:last-child{border-bottom:0}
+.lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+label{font-size:.8rem;display:flex;align-items:center;gap:6px}
+select,button{font:inherit;font-size:.8rem;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:3px;padding:4px 7px}
+button{cursor:pointer}button:hover{border-color:var(--accent)}
+button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.rng{display:grid;grid-template-columns:22px 1fr 1fr 58px;gap:4px;align-items:center;font-family:var(--mono);font-size:.74rem}
+.rng input{width:100%;min-width:0}
+.rng span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{accent-color:var(--accent)}
+.zchip{display:inline-flex;align-items:center;gap:5px}
+.zchip i,.sw{display:inline-block;width:11px;height:11px;border-radius:2px;flex:none}
+.view{position:relative;background:var(--view);border-radius:4px 4px 0 0;overflow:hidden}
+#c3{display:block;width:100%;height:auto;aspect-ratio:16/10.5;touch-action:none}
+.hud{position:absolute;left:10px;top:8px;font-family:var(--mono);font-size:.72rem;color:#b8c4cc;pointer-events:none;text-shadow:0 1px 2px #000}
+.compass{position:absolute;right:10px;top:8px;width:54px;height:54px;pointer-events:none}
+.legend{padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+#lgbar{width:100%;height:12px;border-radius:2px}
+.lgt{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.cats{display:flex;gap:10px;flex-wrap:wrap;font-size:.78rem}
+.cats span{display:inline-flex;align-items:center;gap:5px}
+.ovl{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 10px;border-top:1px solid var(--line)}
+.help{font-size:.75rem;color:var(--muted);padding:6px 10px 9px}
+.insp{font-family:var(--mono);font-size:.76rem}
+.insp table,.tbl{width:100%;border-collapse:collapse}
+.insp td{padding:3px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.insp td:last-child{text-align:right}
+.empty{color:var(--muted);font-size:.8rem;padding:4px 0;font-family:var(--sans)}
+.hero{font-size:1.9rem;font-weight:600;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.hero small{font-size:.8rem;font-weight:500;color:var(--muted);margin-left:4px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.8rem}
+.kv span:nth-child(even){font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.kv span:nth-child(odd){color:var(--muted)}
+.tbl{font-size:.76rem;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tbl th{font-family:var(--sans);text-align:left;font-weight:500;color:var(--muted);font-size:.7rem;border-bottom:1px solid var(--line);padding:2px 0}
+.tbl td{padding:2px 0;border-bottom:1px solid var(--line)}
+.tbl td.n,.tbl th.n{text-align:right}
+.note{font-size:.76rem;color:var(--muted);line-height:1.45}
+.note b{color:var(--fg);font-weight:500}
+[hidden]{display:none!important}
+</style>
+
+<header>
+  <h1>Norne reference model</h1>
+  <div class="facts"><span>ATW 2013 · SPECGRID <b>46 × 112 × 22</b></span><span>active <b id="f-act">–</b></span><span>depth <b id="f-z">–</b></span><span>extent <b id="f-xy">–</b></span><span>STOIIP <b id="f-stoiip">–</b></span></div>
+</header>
+
+<div class="app">
+  <div class="pane">
+    <div class="ph">Display</div>
+    <div class="sec"><span class="lbl">Property</span><select id="prop"></select></div>
+    <div class="sec"><span class="lbl">Zones</span><div class="row" id="zones"></div></div>
+    <div class="sec"><span class="lbl">Filter cells (1-based)</span>
+      <div class="rng"><span>I</span><input type="range" id="i0" min="1" max="46" value="1" aria-label="I from"><input type="range" id="i1" min="1" max="46" value="46" aria-label="I to"><span id="iv">1–46</span></div>
+      <div class="rng"><span>J</span><input type="range" id="j0" min="1" max="112" value="1" aria-label="J from"><input type="range" id="j1" min="1" max="112" value="112" aria-label="J to"><span id="jv">1–112</span></div>
+      <div class="rng"><span>K</span><input type="range" id="k0" min="1" max="22" value="1" aria-label="K from"><input type="range" id="k1" min="1" max="22" value="22" aria-label="K to"><span id="kv">1–22</span></div>
+      <div class="row"><button data-preset="full" aria-pressed="true">Full grid</button><button data-preset="layer">One layer</button><button data-preset="isec">I section</button><button data-preset="jsec">J section</button><button data-preset="cut">Corner cut</button></div>
+    </div>
+    <div class="sec"><span class="lbl">View</span>
+      <label>Vertical exaggeration <input type="range" id="ve" min="1" max="15" value="5" style="flex:1"><span id="vev" style="font-family:var(--mono);font-size:.74rem">5×</span></label>
+      <div class="row"><button id="edges" aria-pressed="true">Cell edges</button><button id="hl" aria-pressed="false">Highlight fault faces</button><button id="fonly" aria-pressed="false">Fault walls only</button></div>
+      <div class="row"><button data-cam="persp">3D</button><button data-cam="top">Map</button><button data-cam="south">From south</button><button data-cam="east">From east</button><button id="fit">Fit</button></div>
+    </div>
+    <div class="sec note"><b>Fault surfaces</b> are the 2006 depth interpretation (kseim r06 sticks), meshed between neighbouring sticks and clipped to the grid depth span. <b>Grid fault faces</b> (red, when highlighted) are internal cell faces with a throw &gt; 0.5 m or listed in the Eclipse <b>FAULTS</b> keyword. Click either to inspect it.</div>
+  </div>
+
+  <div class="pane">
+    <div class="view"><canvas id="c3"></canvas>
+      <div class="hud" id="hud">loading grid…</div>
+      <svg class="compass" viewBox="-30 -30 60 60" aria-hidden="true"><circle r="26" fill="rgba(0,0,0,.35)" stroke="#5b6670"/><g id="needle"><path d="M0 -20 L6 4 L0 0 L-6 4Z" fill="#e9eef1"/><text y="-22" text-anchor="middle" font-size="9" fill="#e9eef1" font-family="IBM Plex Mono, monospace">N</text></g></svg>
+    </div>
+    <div class="legend"><canvas id="lgbar" width="512" height="12"></canvas><div class="lgt"><span id="lg0">–</span><span id="lgname">–</span><span id="lg1">–</span></div><div class="cats" id="lgcats" hidden></div></div>
+    <div class="ovl">
+      <span class="lbl" style="align-self:center">Overlays</span>
+      <label><input type="checkbox" id="o-fsurf" checked> <i class="sw" style="background:linear-gradient(90deg,#ffd166,#06d6a0,#ef476f,#118ab2)"></i> Fault surfaces 2006</label>
+      <label><input type="checkbox" id="o-sticks"> <i class="sw" style="background:#ffa94d"></i> Fault sticks</label>
+      <span id="owcbox" class="row" style="gap:10px"></span>
+      <label>Surface opacity <input type="range" id="o-op" min="10" max="100" value="60" style="width:90px"></label>
+      <label><input type="checkbox" id="o-wells" checked> <i class="sw" style="background:#e9eef1"></i> Wells <i class="sw" style="background:#ffd43b;margin-left:4px"></i> blind</label>
+      <label><input type="checkbox" id="o-picks"> <i class="sw" style="background:linear-gradient(90deg,#2166ac,#f7f7f7,#b2182b)"></i> 2002 picks (grid − pick)</label>
+    </div>
+    <div class="help">Drag to orbit · right-drag or shift-drag to pan · scroll to zoom · click a cell or fault face to inspect it</div>
+  </div>
+
+  <div class="pane">
+    <div class="ph"><span>Inspector</span><span id="cellid"></span></div>
+    <div class="sec insp" id="insp"><div class="empty">Click a cell in the 3D window.</div></div>
+    <div class="ph"><span>Benchmark baseline</span><span>truth checks</span></div>
+    <div class="sec" id="bench"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>window.NORNE=__DATA__;</script>
+<script>
+(function(){
+const DATA=window.NORNE, G=DATA.grid, {NX,NY,NZ}=G, NC=NX*NY*NZ;
+const $=id=>document.getElementById(id);
+const dec=(s,T)=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new T(u.buffer)};
+const zc=dec(G.zcorn,Uint16Array), coord=dec(G.coord,Float32Array), act=dec(G.act,Uint8Array);
+const fI=dec(G.fI,Uint8Array), fJ=dec(G.fJ,Uint8Array);
+const cid=(i,j,k)=>(k*NY+j)*NX+i;
+
+// ---- corner points ----
+const CP=new Float32Array(NC*24); let zmin=1e9,zmax=-1e9,nact=0;
+for(let k=0;k<NZ;k++)for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const c=cid(i,j,k);if(!act[c])continue;nact++;
+  for(let n=0;n<8;n++){const a=n&1,b=(n>>1)&1,t=(n>>2)&1;
+    const z=G.z0+zc[((2*k+t)*2*NY+2*j+b)*2*NX+2*i+a]/10, p=((j+b)*(NX+1)+(i+a))*6, z1=coord[p+2], z2=coord[p+5], f=(z-z1)/((z2-z1)||1), o=(c*8+n)*3;
+    CP[o]=coord[p]+f*(coord[p+3]-coord[p]); CP[o+1]=coord[p+1]+f*(coord[p+4]-coord[p+1]); CP[o+2]=z; if(z<zmin)zmin=z; if(z>zmax)zmax=z;}}
+let xmn=1e9,xmx=-1e9,ymn=1e9,ymx=-1e9;
+for(let c=0;c<NC;c++){if(!act[c])continue;for(let n=0;n<8;n++){const o=(c*8+n)*3;xmn=Math.min(xmn,CP[o]);xmx=Math.max(xmx,CP[o]);ymn=Math.min(ymn,CP[o+1]);ymx=Math.max(ymx,CP[o+1]);}}
+$('f-act').textContent=nact.toLocaleString('en-US')+' of '+NC.toLocaleString('en-US');
+$('f-z').textContent=Math.round(zmin)+'–'+Math.round(zmax)+' m TVDSS';
+$('f-xy').textContent=((xmx-xmn)/1000).toFixed(1)+' × '+((ymx-ymn)/1000).toFixed(1)+' km';
+$('f-stoiip').textContent=DATA.bench.vol.stoiip.toFixed(1)+' MSm³';
+
+// ---- properties ----
+const ZONES=[['Garn',1,3,'#f08c00'],['Not',4,4,'#868e96'],['Ile',5,11,'#2f9e44'],['Tofte',12,18,'#1971c2'],['Tilje',19,22,'#ae3ec9']];
+const zoneOfK=k=>ZONES.findIndex(z=>k+1>=z[1]&&k+1<=z[2]);
+const EQ=Object.fromEntries(G.equil.map(e=>[e.eqlnum,e]));
+const REG_LBL={1:'C+D · Garn',2:'G · Garn',3:'E · Garn',4:'G · Ile–Tilje',5:'C+D+E · Ile–Tilje'};
+const scaled=(key,s,off=0)=>{const r=dec(G.props[key],Uint16Array),v=new Float32Array(NC);for(let i=0;i<NC;i++)v[i]=r[i]/s-off;return v};
+const u8=key=>{const r=dec(G.props[key],Uint8Array),v=new Float32Array(NC);for(let i=0;i<NC;i++)v[i]=r[i];return v};
+const depth=new Float32Array(NC),thick=new Float32Array(NC),kk=new Float32Array(NC),zone=new Float32Array(NC),fluid=new Float32Array(NC);
+const eql=u8('EQLNUM');
+for(let c=0;c<NC;c++){if(!act[c])continue;let s=0,t=0;for(let n=0;n<8;n++)s+=CP[(c*8+n)*3+2];for(let n=0;n<4;n++)t+=CP[(c*8+n+4)*3+2]-CP[(c*8+n)*3+2];
+  depth[c]=s/8;thick[c]=t/4;const k=Math.floor(c/(NX*NY));kk[c]=k+1;zone[c]=zoneOfK(k);const e=EQ[eql[c]];fluid[c]=!e?2:depth[c]<=e.goc?0:depth[c]<=e.woc?1:2;}
+const PROPS=[
+  {key:'PORO',label:'Porosity',unit:'frac',v:scaled('PORO',10000),cm:'viridis'},
+  {key:'NTG',label:'Net-to-gross',unit:'frac',v:scaled('NTG',10000),cm:'viridis'},
+  {key:'LOGK',label:'Permeability, log₁₀ kₓ',unit:'log mD',v:scaled('LOGK',1000,2),cm:'viridis'},
+  {key:'SWAT',label:'Initial water saturation',unit:'frac',v:scaled('SWAT',10000),cm:'water'},
+  {key:'FLUID',label:'Fluid at t₀ (EQUIL contacts)',unit:'',v:fluid,cat:[['Gas','#e64980'],['Oil','#2b8a3e'],['Water','#1c7ed6']]},
+  {key:'ZONE',label:'Zone',unit:'',v:zone,cat:ZONES.map(z=>[z[0],z[3]])},
+  {key:'K',label:'Layer K',unit:'',v:kk,cm:'layers'},
+  {key:'DEPTH',label:'Cell depth',unit:'m',v:depth,cm:'depth'},
+  {key:'THICK',label:'Cell thickness',unit:'m',v:thick,cm:'viridis'},
+  {key:'EQLNUM',label:'Equilibration region',unit:'',v:eql,cat:[[],[REG_LBL[1],'#4263eb'],[REG_LBL[2],'#e8590c'],[REG_LBL[3],'#0ca678'],[REG_LBL[4],'#f59f00'],[REG_LBL[5],'#ae3ec9']],catBase:0},
+  {key:'FIPNUM',label:'FIP region',unit:'',v:u8('FIPNUM'),cm:'layers'},
+];
+const CM={viridis:['#440154','#46327e','#365c8d','#277f8e','#1fa187','#4ac16d','#a0da39','#fde725'],
+  water:['#f2c14e','#d9b65a','#a8b47a','#6fa59a','#4a8fb3','#2f6fae','#1f4e96'],
+  depth:['#fde725','#7ad151','#22a884','#2a788e','#414487','#440154'],
+  layers:['#e6194b','#f58231','#ffe119','#bfef45','#3cb44b','#42d4f4','#4363d8','#911eb4','#f032e6','#a9a9a9']};
+const hex=h=>[parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255];
+const FAULT_RGB=hex('#e03131');
+function cmap(name,t){const L=CM[name];if(name==='layers')return hex(L[((Math.round(t)%L.length)+L.length)%L.length]);
+  t=Math.max(0,Math.min(1,t))*(L.length-1);const i=Math.min(L.length-2,Math.floor(t)),f=t-i,a=hex(L[i]),b=hex(L[i+1]);return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f]}
+const sortedCache={};
+function sortedVals(pi){if(sortedCache[pi])return sortedCache[pi];const a=[];for(let c=0;c<NC;c++)if(act[c])a.push(PROPS[pi].v[c]);a.sort((x,y)=>x-y);return sortedCache[pi]=a}
+const pct=(a,q)=>a[Math.min(a.length-1,Math.max(0,Math.floor(q*(a.length-1))))];
+const fmt=(v,p)=>{if(p&&(p.cat||p.cm==='layers'))return String(Math.round(v));const a=Math.abs(v);return a>=100?v.toFixed(0):a>=10?v.toFixed(1):a>=1?v.toFixed(2):v.toFixed(3)};
+
+// ---- UI: property + zones ----
+const sel=$('prop');PROPS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.label;sel.appendChild(o)});
+const zoneOn=ZONES.map(()=>true);
+ZONES.forEach((z,i)=>{const l=document.createElement('label');l.className='zchip';l.innerHTML=`<input type="checkbox" checked> <i style="background:${z[3]}"></i>${z[0]}`;
+  l.querySelector('input').onchange=e=>{zoneOn[i]=e.target.checked;later()};$('zones').appendChild(l)});
+
+// ---- three.js ----
+const cv=$('c3');const R=new THREE.WebGLRenderer({canvas:cv,antialias:true});R.setPixelRatio(Math.min(2,devicePixelRatio));
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0c1013);
+const cam=new THREE.PerspectiveCamera(35,1.5,1,5000);
+scene.add(new THREE.HemisphereLight(0xffffff,0x40464c,0.75));
+const dl=new THREE.DirectionalLight(0xffffff,0.55);dl.position.set(-0.6,1,0.4);scene.add(dl);
+const dl2=new THREE.DirectionalLight(0xffffff,0.2);dl2.position.set(0.7,0.3,-0.8);scene.add(dl2);
+const ctl=new THREE.OrbitControls(cam,cv);ctl.enableDamping=true;ctl.dampingFactor=0.12;ctl.screenSpacePanning=true;
+const S=100;let VE=5;const zmid=(zmin+zmax)/2;
+const P3=(x,y,z)=>[x/S,-(z-zmid)*VE/S,-y/S];   // east → +x, up → +y, north → −z
+const mat=new THREE.MeshPhongMaterial({vertexColors:true,side:THREE.DoubleSide,flatShading:true,shininess:12,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+const wmat=new THREE.MeshPhongMaterial({color:0xe03131,side:THREE.DoubleSide,flatShading:true,shininess:20,transparent:true,opacity:0.85,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+const lmat=new THREE.LineBasicMaterial({color:0x000000,transparent:true,opacity:0.35});
+const wlmat=new THREE.LineBasicMaterial({color:0x5c0a0a,transparent:true,opacity:0.6});
+// faces: corner cycle + neighbour offset; MATE = neighbour's matching corners in the same order
+const FACES=[[0,2,6,4,-1,0,0],[1,5,7,3,1,0,0],[0,4,5,1,0,-1,0],[2,3,7,6,0,1,0],[0,1,3,2,0,0,-1],[4,6,7,5,0,0,1]];
+const MATE=[[1,3,7,5],[0,4,6,2],[2,6,7,3],[0,1,5,4],[4,5,7,6],[0,2,3,1]];
+function faultInfo(c,i,j,k,f){ // lateral faces only → {name, throw} or null
+  const [q0,q1,q2,q3,di,dj]=FACES[f];if(f>3)return null;const ni=i+di,nj=j+dj;if(ni<0||nj<0||ni>=NX||nj>=NY)return null;
+  const nc=cid(ni,nj,k);let kw=0;
+  if(f===0)kw=fI[cid(ni,nj,k)];else if(f===1)kw=fI[c];else if(f===2)kw=fJ[cid(ni,nj,k)];else kw=fJ[c];
+  let thr=0;if(act[nc]){const q=[q0,q1,q2,q3],m=MATE[f];for(let r=0;r<4;r++)thr=Math.max(thr,Math.abs(CP[(c*8+q[r])*3+2]-CP[(nc*8+m[r])*3+2]))}
+  if(act[nc]&&(kw||thr>0.5))return{name:kw?G.faultNames[kw-1]:'(unnamed, throw only)',thr,nc};return null}
+
+let cells=null,edges=null,walls=null,wedges=null,faceRef=[],wallRef=[],visible=new Uint8Array(NC),nVis=0,cutMode=false,range={lo:0,hi:1};
+function filters(){const g=id=>+$(id).value;let i0=g('i0'),i1=g('i1'),j0=g('j0'),j1=g('j1'),k0=g('k0'),k1=g('k1');
+  if(i0>i1)[i0,i1]=[i1,i0];if(j0>j1)[j0,j1]=[j1,j0];if(k0>k1)[k0,k1]=[k1,k0];
+  $('iv').textContent=i0+'–'+i1;$('jv').textContent=j0+'–'+j1;$('kv').textContent=k0+'–'+k1;return{i0:i0-1,i1:i1-1,j0:j0-1,j1:j1-1,k0:k0-1,k1:k1-1}}
+const pressed=id=>$(id).getAttribute('aria-pressed')==='true';
+function colorOf(p,c){if(p.cat){const e=p.cat[Math.round(p.v[c])];return hex(e&&e[1]?e[1]:'#cccccc')}
+  if(p.cm==='layers')return cmap('layers',p.v[c]-1);return cmap(p.cm,(p.v[c]-range.lo)/((range.hi-range.lo)||1))}
+function dispose(o){if(o){scene.remove(o);o.geometry.dispose()}}
+
+function rebuild(){
+  const pi=+sel.value,p=PROPS[pi],a=sortedVals(pi),F=filters();
+  range=(p.cat||p.cm==='layers')?{lo:a[0],hi:a[a.length-1]}:{lo:pct(a,0.02),hi:pct(a,0.98)};
+  visible.fill(0);nVis=0;
+  for(let k=F.k0;k<=F.k1;k++)for(let j=F.j0;j<=F.j1;j++)for(let i=F.i0;i<=F.i1;i++){const c=cid(i,j,k);
+    if(!act[c]||!zoneOn[zone[c]])continue;if(cutMode&&i>=Math.floor(NX/2)&&j<Math.floor(NY/2))continue;visible[c]=1;nVis++}
+  const hl=pressed('hl'),fonly=pressed('fonly');
+  const pos=[],col=[],lp=[],wp=[],wlp=[];faceRef=[];wallRef=[];let nf=0,nfault=0;
+  for(let k=0;k<NZ;k++)for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const c=cid(i,j,k);if(!visible[c])continue;const rgb=colorOf(p,c);
+    for(let f=0;f<6;f++){const [q0,q1,q2,q3,di,dj,dk]=FACES[f],ni=i+di,nj=j+dj,nk=k+dk;
+      const out=ni<0||nj<0||nk<0||ni>=NX||nj>=NY||nk>=NZ||!visible[cid(ni,nj,nk)];
+      const fi=faultInfo(c,i,j,k,f);
+      const V=[q0,q1,q2,q3].map(q=>{const o=(c*8+q)*3;return P3(CP[o],CP[o+1],CP[o+2])});
+      // fault walls: each fault face once (from the +I/+J side, or from the visible side if the other is hidden)
+      if(fi&&(f===1||f===3||!visible[fi.nc])){for(const t of[0,1,2,0,2,3])wp.push(...V[t]);for(const[x,y]of[[0,1],[1,2],[2,3],[3,0]])wlp.push(...V[x],...V[y]);wallRef.push({c,f,...fi},{c,f,...fi});nfault++}
+      if(!out||fonly)continue;
+      const crgb=(hl&&fi)?FAULT_RGB:rgb;
+      for(const t of[0,1,2,0,2,3]){pos.push(...V[t]);col.push(...crgb)}faceRef.push({c,f,fi},{c,f,fi});
+      for(const[x,y]of[[0,1],[1,2],[2,3],[3,0]])lp.push(...V[x],...V[y]);nf++}}
+  dispose(cells);dispose(edges);dispose(walls);dispose(wedges);
+  let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));cells=new THREE.Mesh(g,mat);scene.add(cells);
+  g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(lp,3));edges=new THREE.LineSegments(g,lmat);edges.visible=pressed('edges');scene.add(edges);
+  g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(wp,3));walls=new THREE.Mesh(g,wmat);walls.visible=fonly||hl;scene.add(walls);
+  g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(wlp,3));wedges=new THREE.LineSegments(g,wlmat);wedges.visible=walls.visible&&pressed('edges');scene.add(wedges);
+  $('hud').textContent=`${nVis.toLocaleString('en-US')} cells · ${nf.toLocaleString('en-US')} faces · ${nfault.toLocaleString('en-US')} fault faces · VE ${VE}×`;
+  legend(p);buildOverlays();if(picked&&!visible[picked.c])clearPick();else if(picked)showPick(picked);frame();
+}
+
+// ---- legend ----
+function legend(p){const c=$('lgbar'),g=c.getContext('2d'),cats=$('lgcats');$('lgname').textContent=p.label+(p.unit&&!p.cat?` (${p.unit})`:'');
+  if(p.cat){c.hidden=true;cats.hidden=false;cats.innerHTML=p.cat.map(e=>e&&e[0]?`<span><i class="sw" style="background:${e[1]}"></i>${e[0]}</span>`:'').join('')+`<span><i class="sw" style="background:#e03131"></i>fault face</span>`;$('lg0').textContent='';$('lg1').textContent='';return}
+  c.hidden=false;cats.hidden=true;for(let x=0;x<c.width;x++){const t=x/(c.width-1);const rgb=p.cm==='layers'?cmap('layers',Math.floor(t*(range.hi-range.lo+0.999))):cmap(p.cm,t);g.fillStyle=`rgb(${rgb.map(v=>Math.round(v*255)).join(',')})`;g.fillRect(x,0,1,c.height)}
+  $('lg0').textContent=fmt(range.lo,p);$('lg1').textContent=fmt(range.hi,p)}
+
+// ---- overlays: sticks, wells, picks ----
+let ovS=null,ovW=null,ovWb=null,ovP=null,labels=[],fMeshes=[],oMeshes=[];
+const FCOL=['#ffd166','#06d6a0','#ef476f','#118ab2','#f78c6b','#83c5be','#c77dff','#a7c957'];
+const OCOL={2001:'#9ad1ff',2003:'#5fb0f5',2004:'#3a86e0',2006:'#1f5fc4'};
+const owcOn={2001:true,2003:false,2004:false,2006:true};
+DATA.owc.forEach(o=>{const l=document.createElement('label');l.innerHTML=`<input type="checkbox" ${owcOn[o.year]?'checked':''}> <i class="sw" style="background:${OCOL[o.year]}"></i> ${o.label}`;
+  l.querySelector('input').onchange=e=>{owcOn[o.year]=e.target.checked;oMeshes.forEach(m=>{if(m.userData.year===o.year)m.visible=e.target.checked});frame()};$('owcbox').appendChild(l)});
+function surfMesh(v,t,color,op,ud){const pos=new Float32Array(v.length);for(let n=0;n<v.length;n+=3){const q=P3(v[n],v[n+1],v[n+2]);pos[n]=q[0];pos[n+1]=q[1];pos[n+2]=q[2]}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setIndex(t);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshPhongMaterial({color,side:THREE.DoubleSide,transparent:true,opacity:op,depthWrite:false,shininess:30}));m.userData=ud;m.renderOrder=5;return m}
+function sprite(text,color){const cv2=document.createElement('canvas'),g=cv2.getContext('2d');g.font='500 26px IBM Plex Mono, monospace';const w=Math.ceil(g.measureText(text).width)+12;cv2.width=w;cv2.height=36;
+  g.font='500 26px IBM Plex Mono, monospace';g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,0,w,36);g.fillStyle=color;g.fillText(text,6,27);
+  const t=new THREE.CanvasTexture(cv2);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));s.scale.set(w/36*0.9,0.9,1);s.renderOrder=10;return s}
+function buildOverlays(){
+  [ovS,ovW,ovWb,ovP,...fMeshes,...oMeshes].forEach(dispose);labels.forEach(l=>scene.remove(l));labels=[];
+  const op=+$('o-op').value/100;
+  fMeshes=DATA.fsurf.map((f,n)=>{const m=surfMesh(f.v,f.t,FCOL[n%FCOL.length],op,{kind:'fault',...f});m.visible=$('o-fsurf').checked;scene.add(m);return m});
+  oMeshes=DATA.owc.map(o=>{const m=surfMesh(o.v,o.t,OCOL[o.year],op*0.8,{kind:'owc',...o});m.visible=owcOn[o.year];scene.add(m);return m});
+  const sp=[];for(const sticks of Object.values(DATA.sticks))for(const s of sticks)for(let n=0;n+5<s.length;n+=3)sp.push(...P3(s[n],s[n+1],s[n+2]),...P3(s[n+3],s[n+4],s[n+5]));
+  let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));ovS=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xffa94d}));ovS.visible=$('o-sticks').checked;scene.add(ovS);
+  const wp=[],bp=[];DATA.wells.forEach(w=>{const tgt=w.blind?bp:wp,p=w.p;for(let n=0;n+5<p.length;n+=3)tgt.push(...P3(p[n],p[n+1],p[n+2]),...P3(p[n+3],p[n+4],p[n+5]));
+    const L=sprite(w.name,w.blind?'#ffd43b':'#e9eef1');L.position.set(...P3(p[0],p[1],p[2]));L.position.y+=0.5;L.visible=$('o-wells').checked;labels.push(L);scene.add(L)});
+  g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(wp,3));ovW=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xe9eef1}));
+  const gb=new THREE.BufferGeometry();gb.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));ovWb=new THREE.LineSegments(gb,new THREE.LineBasicMaterial({color:0xffd43b}));
+  ovW.visible=ovWb.visible=$('o-wells').checked;scene.add(ovW,ovWb);
+  const pp=[],pc=[];const div=r=>{const t=Math.max(-1,Math.min(1,r/15));const a=hex('#f7f7f7'),b=hex(t<0?'#2166ac':'#b2182b'),u=Math.abs(t);return[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u,a[2]+(b[2]-a[2])*u]};
+  DATA.picks.forEach(k=>{pp.push(...P3(...k.p));pc.push(...div(k.r))});
+  g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pp,3));g.setAttribute('color',new THREE.Float32BufferAttribute(pc,3));
+  ovP=new THREE.Points(g,new THREE.PointsMaterial({size:9,sizeAttenuation:false,vertexColors:true,depthTest:false}));ovP.renderOrder=8;ovP.visible=$('o-picks').checked;scene.add(ovP);
+}
+$('o-sticks').onchange=e=>{ovS.visible=e.target.checked;frame()};
+$('o-wells').onchange=e=>{ovW.visible=ovWb.visible=e.target.checked;labels.forEach(l=>l.visible=e.target.checked);frame()};
+$('o-picks').onchange=e=>{ovP.visible=e.target.checked;frame()};
+$('o-fsurf').onchange=e=>{fMeshes.forEach(m=>m.visible=e.target.checked);frame()};
+$('o-op').oninput=e=>{const op=+e.target.value/100;fMeshes.forEach(m=>m.material.opacity=op);oMeshes.forEach(m=>m.material.opacity=op*0.8);frame()};
+
+// ---- picking / inspector ----
+let picked=null,down=null;const ray=new THREE.Raycaster();ray.params.Points.threshold=0.15;
+const LN=G.layerNames;
+cv.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY]});
+cv.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>4)return;const r=cv.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),cam);
+  const tg=[];if(ovP.visible)tg.push(ovP);if(cells.visible&&cells.geometry.attributes.position.count)tg.push(cells);if(walls.visible)tg.push(walls);
+  fMeshes.concat(oMeshes).forEach(m=>{if(m.visible)tg.push(m)});
+  const h=ray.intersectObjects(tg)[0];if(!h){clearPick();return}
+  if(h.object===ovP){const k=DATA.picks[h.index];picked=null;rmBox();$('cellid').textContent='well pick';
+    $('insp').innerHTML=tbl([['Well',k.w],['Marker',k.m],['Pick TVDSS',k.p[2].toFixed(1)+' m'],['Grid TVDSS',k.g.toFixed(1)+' m'],['Grid − pick',k.r.toFixed(1)+' m']]);frame();return}
+  const u=h.object.userData;
+  if(u.kind==='fault'||u.kind==='owc'){picked=null;rmBox();const z=zmid-h.point.y*S/VE;$('cellid').textContent=u.kind==='fault'?'fault surface':'contact';
+    const rows=u.kind==='fault'?[['Fault',u.name],['Source','kseim r06 sticks, depth'],['Depth here',z.toFixed(0)+' m'],
+      ['Grid fault, median dist.',u.d50!=null?u.d50.toFixed(0)+' m':'–'],['Grid fault, P90 dist.',u.d90!=null?u.d90.toFixed(0)+' m':'–']]
+      :[['Surface',u.label+' (official depth)'],['Depth here',z.toFixed(0)+' m'],['Median depth',u.median.toFixed(0)+' m']];
+    $('insp').innerHTML=tbl(rows);frame();return}
+  const ref=(h.object===walls?wallRef:faceRef)[h.faceIndex];picked={c:ref.c,f:ref.f,fi:h.object===walls?ref:ref.fi};showPick(picked)});
+let box=null;function rmBox(){if(box){scene.remove(box);box.geometry.dispose();box=null}}
+function clearPick(){picked=null;rmBox();$('insp').innerHTML='<div class="empty">Click a cell in the 3D window.</div>';$('cellid').textContent='';frame()}
+const tbl=rows=>`<table>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</table>`;
+function showPick(pk){rmBox();const c=pk.c,pts=[],E=[[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+  for(const[a,b]of E)for(const q of[a,b]){const o=(c*8+q)*3;pts.push(...P3(CP[o],CP[o+1],CP[o+2]))}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));box=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xffffff,depthTest:false}));box.renderOrder=9;scene.add(box);
+  const k=Math.floor(c/(NX*NY)),j=Math.floor(c/NX)%NY,i=c%NX;let ex=0,ey=0;for(let n=0;n<8;n++){ex+=CP[(c*8+n)*3];ey+=CP[(c*8+n)*3+1]}
+  $('cellid').textContent=`(${i+1}, ${j+1}, ${k+1})`;const e=EQ[eql[c]];
+  const rows=[];if(pk.fi)rows.push(['Fault',pk.fi.name],['Throw on face',pk.fi.thr.toFixed(1)+' m']);
+  rows.push(['Layer',`${LN[k]} (K ${k+1})`],['Easting',(ex/8+G.cx).toFixed(0)+' m'],['Northing',(ey/8+G.cy).toFixed(0)+' m'],
+    ['Depth',depth[c].toFixed(1)+' m'],['Thickness',thick[c].toFixed(2)+' m'],['Porosity',PROPS[0].v[c].toFixed(3)],['Net-to-gross',PROPS[1].v[c].toFixed(3)],
+    ['kₓ',Math.pow(10,PROPS[2].v[c]).toFixed(1)+' mD'],['S_w init',PROPS[3].v[c].toFixed(3)],['Region',`${eql[c]} · ${REG_LBL[eql[c]]||'–'}`],
+    ['Contacts',e?`GOC ${e.goc} · WOC ${e.woc}`:'–'],['Fluid',['Gas','Oil','Water'][fluid[c]]]);
+  $('insp').innerHTML=tbl(rows);frame()}
+
+// ---- camera ----
+function camPreset(kind){let ctr=new THREE.Vector3(),rad=Math.max(xmx-xmn,ymx-ymn)/S*0.55;
+  if(cells&&cells.geometry.attributes.position.count){cells.geometry.computeBoundingSphere();ctr=cells.geometry.boundingSphere.center.clone();rad=Math.max(cells.geometry.boundingSphere.radius,2)}
+  const dir=kind==='top'?[0,1,0.0001]:kind==='south'?[0,0.15,1]:kind==='east'?[1,0.15,0]:[0.85,0.55,0.95];
+  const v=new THREE.Vector3(...dir).normalize(),dist=rad/Math.sin(THREE.MathUtils.degToRad(cam.fov/2))*0.85;
+  ctl.target.copy(ctr);cam.position.copy(ctr).addScaledVector(v,dist);cam.near=dist/100;cam.far=dist*10;cam.updateProjectionMatrix();ctl.update();frame()}
+function resize(){const w=cv.clientWidth||800,h=Math.round(w/(16/10.5));R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();frame()}
+new ResizeObserver(resize).observe(cv.parentElement);
+const needle=$('needle');
+function frame(){R.render(scene,cam);const a=new THREE.Vector3(0,0,0).project(cam),b=new THREE.Vector3(0,0,-10).project(cam);const ang=Math.atan2(-(b.y-a.y),b.x-a.x)*180/Math.PI+90;if(isFinite(ang))needle.setAttribute('transform',`rotate(${ang})`)}
+ctl.addEventListener('change',frame);(function loop(){ctl.update();requestAnimationFrame(loop)})();
+
+// ---- wiring ----
+let tmr=null;function later(){clearTimeout(tmr);tmr=setTimeout(rebuild,60)}
+['i0','i1','j0','j1','k0','k1'].forEach(id=>$(id).addEventListener('input',()=>{cutMode=false;setPreset(null);later()}));
+sel.onchange=rebuild;
+$('ve').oninput=e=>{VE=+e.target.value;$('vev').textContent=VE+'×';later()};
+['edges','hl','fonly'].forEach(id=>$(id).onclick=()=>{$(id).setAttribute('aria-pressed',!pressed(id));rebuild()});
+function setPreset(btn){document.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',b===btn))}
+const setR=(a,b,lo,hi)=>{$(a).value=lo;$(b).value=hi};
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const k=b.dataset.preset;cutMode=k==='cut';
+  setR('i0','i1',1,46);setR('j0','j1',1,112);setR('k0','k1',1,22);
+  if(k==='layer')setR('k0','k1',5,5);if(k==='isec')setR('i0','i1',23,23);if(k==='jsec')setR('j0','j1',56,56);
+  setPreset(b);rebuild();camPreset(k==='layer'?'top':k==='isec'?'east':k==='jsec'?'south':'persp')});
+document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>camPreset(b.dataset.cam));
+$('fit').onclick=()=>camPreset('persp');
+
+// ---- benchmark panel ----
+(function(){const B=DATA.bench,v=B.vol,f=B.faults;
+  const picks=B.picks.map(p=>`<tr><td>${p.marker.replace(' NO 2002','')}</td><td class="n">${p.n}</td><td class="n">${p.rms_m.toFixed(1)}</td><td class="n">${p.bias_m.toFixed(1)}</td></tr>`).join('');
+  $('bench').innerHTML=`
+  <div><div class="lbl">Reference oil in place</div><div class="hero">${v.stoiip.toFixed(1)}<small>MSm³ STOIIP</small></div></div>
+  <div class="kv"><span>Bulk rock volume</span><span>${v.brv.toFixed(0)} Mm³</span><span>Pore volume</span><span>${v.pv.toFixed(1)} Mm³</span>
+    <span>HC pore vol. oil / gas</span><span>${v.hcpv_oil.toFixed(1)} / ${v.hcpv_gas.toFixed(1)}</span></div>
+  <div><div class="lbl" style="margin-bottom:3px">Grid vs 2002 well picks</div>
+    <table class="tbl"><thead><tr><th>Marker</th><th class="n">n</th><th class="n">RMS m</th><th class="n">bias m</th></tr></thead><tbody>${picks}</tbody></table></div>
+  <div class="kv"><span>Grid fault faces ≤100 m from a 2006 stick</span><span>${Math.round(f.gridfaces_within_100m_of_stick_frac*100)}%</span>
+    <span>Stick points ≤100 m from a grid fault</span><span>${Math.round(f.stickpoints_within_100m_of_gridface_frac*100)}%</span>
+    <span>FAULTS-keyword faces with throw</span><span>${Math.round(f['keyword_faces_on_zcorn_discontinuity_frac@1m']*100)}%</span>
+    <span>Active cells inside 2001 seismic</span><span>${(B.georef*100).toFixed(1)}%</span>
+    <span>Realizations / distinct facies</span><span>${B.ens_n} / ${B.ens_distinct}</span>
+    <span>Not 2 horizon, 2006 vs 2003</span><span>${B.horizon.diff_2006_minus_2003_ms.median_abs} ms</span></div>
+  <div class="note">Blind well families (yellow): <b>${B.blind.map(b=>b.replace('6608/10-','')).join(', ')}</b>. Tolerances for scoring agents are calibrated from these truth-vs-truth disagreements.</div>`;})();
+
+resize();rebuild();camPreset('persp');
+})();
+</script>

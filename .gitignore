@@ -18,3 +18,4 @@ evaluation/references/*/manifest.json
 evaluation/summary.csv
 evaluation/summary.json
 evaluation/reproducibility_manifest.json
+tmp
