@@ -130,6 +130,7 @@ class Orchestrator:
         s.emit("phase", "orchestrator", phase="Horizon interpretation")
         findings = ""
         verdicts = []
+        history: list[dict] = []
         for rnd in range(1, MAX_ROUNDS + 2):
             prompt = (f"Study brief: {c.brief}\nThe well agent tied marker '{ctx.state.get('marker', tie.marker)}'."
                       f" Publish the horizon as '{c.horizon_name}'.")
@@ -143,10 +144,19 @@ class Orchestrator:
                           f"Verify HorizonPicks:{c.horizon_name} (version {m.version}) against your ties.", c.model),
                 run_agent(FA.build_verify(c.model, c.horizon_name), ctx_v, "fault_agent_verifier",
                           f"Verify HorizonPicks:{c.horizon_name} (version {m.version}) against your fault map.", c.model))
-            for who, v in (("well_agent", vw), ("fault_agent", vf)):
+            ev_w = ctx.state.get("last_well_check", {})
+            ev_f = ctx.state.get("last_fault_check", {})
+            for who, v, ev in (("well_agent", vw, ev_w), ("fault_agent", vf, ev_f)):
                 m = s.add_verdict(s.get("HorizonPicks", c.horizon_name, m.version),
                                   Verdict(verifier=who, passed=v.passed, summary=v.summary, findings=v.findings,
-                                          evidence={"bad_wells": v.bad_wells}, round=rnd))
+                                          evidence={"bad_wells": v.bad_wells, "check": ev}, round=rnd))
+            last_track = next((tc.params for tc in reversed(m.tool_calls) if tc.tool == "track_horizon"), {})
+            history.append({"version": m.version, "passes": int(vw.passed) + int(vf.passed),
+                            "well_mae_ms": ev_w.get("mae_ms"), "well_tolerance_ms": ev_w.get("tolerance_ms"),
+                            "off_fault_jumps_per_picked": ev_f.get("off_fault_jumps_per_picked"),
+                            "throw_mismatch_frac": (ev_f.get("throw_consistency") or {}).get("mismatch_frac"),
+                            "track_params": {k: last_track.get(k) for k in ("method", "polarity", "window_ms", "guide_window_ms",
+                                                                           "fault_mode", "min_corr", "bulk_shift_ms") if k in last_track}})
             passed = vw.passed and vf.passed
             if not passed:                                   # status reflects the combined verdict
                 m = s.set_status(m, "rejected")
@@ -157,15 +167,28 @@ class Orchestrator:
             findings = json.dumps({who: {"passed": vv.passed, "summary": vv.summary, "findings": vv.findings,
                                          "bad_wells": vv.bad_wells, "suggested_fix": vv.suggested_fix}
                                    for who, vv in (("well_agent", vw), ("fault_agent", vf))}, indent=1)
+            findings += ("\n\nAll versions so far (verifier numbers and the parameters used) — do not regress; "
+                         "returning to an earlier, better setting is allowed:\n" + json.dumps(history, indent=1))
 
-        final = s.get("HorizonPicks", c.horizon_name)
-        final_passed = all(vd.passed for vd in final.verdicts if vd.round == final.verdicts[-1].round) if final.verdicts else False
+        # keep the best version, judged only by the verifiers (input data): most passes, then the lowest sum of
+        # verifier metrics each divided by its own tolerance (well residual, off-fault jumps, throw mismatch)
+        def norm_score(h):
+            parts = [(h["well_mae_ms"], h["well_tolerance_ms"] or 9.45), (h["off_fault_jumps_per_picked"], 0.03),
+                     (h["throw_mismatch_frac"], 0.30)]
+            return sum((v / t) if v is not None else 3.0 for v, t in parts)
+        for h in history:
+            h["normalised_verifier_score"] = round(norm_score(h), 3)
+        best = sorted(history, key=lambda h: (-h["passes"], h["normalised_verifier_score"]))[0]
+        final = s.get("HorizonPicks", c.horizon_name, best["version"])
+        s.emit("selection", "orchestrator", object=final.id, version=final.version,
+               rule="most verifier passes, then lowest sum of verifier metrics / tolerances", history=history)
+        final_passed = best["passes"] == 2
         if not final_passed:
             s.emit("ledger", "orchestrator", scenario=f"{c.horizon_name}: unresolved after {MAX_ROUNDS} reworks",
                    object=final.id, versions=[vv for vv, _ in verdicts])
-            choice = await self.ask("Horizon still rejected after two reworks",
+            choice = await self.ask("Horizon still not passed by both verifiers after two reworks",
                                     f"Latest verdict: {verdicts[-1][1].summary}\nFindings: {verdicts[-1][1].findings}",
-                                    ["accept latest", "stop"], "accept latest")
+                                    ["accept best", "stop"], "accept best")
             if choice == "stop":
                 return
             s.set_status(final, "draft", scenario="unresolved verifier disagreement")
@@ -176,7 +199,7 @@ class Orchestrator:
                             ["freeze", "stop"], "freeze", gate="G2")
         if g2 == "stop":
             return
-        final = s.set_status(s.get("HorizonPicks", c.horizon_name), "frozen")
+        final = s.set_status(s.get("HorizonPicks", c.horizon_name, final.version), "frozen")
         self.export_candidate(final)
         if c.score:
             await asyncio.to_thread(score_run, s)
@@ -231,7 +254,7 @@ def write_run_log(store: Store) -> None:
             lines.append(f"- **{e['agent']}** finished in {e.get('seconds')} s · tokens in/out {u.get('input_tokens')}/{u.get('output_tokens')}")
         elif k == "tool":
             lines.append(f"  - tool `{e['tool']}` {json.dumps(e.get('params', {}))[:200]}")
-        elif k in ("publish", "verdict", "decision", "ledger", "export", "score", "phase", "run_error", "agent_error"):
+        elif k in ("publish", "verdict", "decision", "ledger", "selection", "export", "score", "phase", "run_error", "agent_error"):
             body = {x: e[x] for x in e if x not in ("seq", "t", "kind", "agent")}
             lines.append(f"- {k} · {e.get('agent', '')} · {json.dumps(body, default=str)[:400]}")
     lines += ["", f"Total tokens: in {tok_in}, out {tok_out}", ""]

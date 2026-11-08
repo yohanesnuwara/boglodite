@@ -166,7 +166,11 @@ def score_horizons(ref: Reference, df: pd.DataFrame) -> StageResult:
         Metric("time_rmse", "Not 2 Fm top · time RMSE", "ms", gated(rmse(d), cov), 20, primary=False),
         Metric("time_bias", "Not 2 Fm top · mean bias", "ms", float(d.mean()) if len(d) else None, 10, primary=False),
     ]
-    st.info = {"reference_nodes": len(ref.horizon), "reference": "Not 2 Fm top, 2006 geomodel input (TWT)"}
+    st.info = {"reference_nodes": len(ref.horizon), "reference": "Not 2 Fm top, 2006 geomodel input (TWT)",
+               "input_floor_ms": 22.2,
+               "floor_note": "Checkshot/TD-table times of the Not 2 well tops differ from the reference horizon by "
+                             "MAE 22.2 ms (median +11 ms; reference on a trough). The reference was converted with a "
+                             "different time–depth model; spec §10.7. Tolerance stays 15 ms."}
     return st
 
 

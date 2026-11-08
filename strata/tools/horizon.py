@@ -260,17 +260,51 @@ def guide_surface(cube: Cube, points: list[tuple[float, float, float]], smooth_t
 
 
 # ── global tracking: Viterbi / dynamic programming along lines ───────────────
+def _reliable_throw(D: np.ndarray, t0: float, dt: float, a: int, b: int, t: float, max_throw_ms: float,
+                    win_ms: float = 80.0, tol_ms: float = 8.0, min_ncc: float = 0.6) -> float | None:
+    """Seismic time offset from trace a to trace b (rows of a line array) at time t, kept only if
+    forward, reverse and 1.5× window estimates agree within tol_ms."""
+    L = int(max_throw_ms / dt)
+
+    def est(i, j, tt, w):
+        hw = int(w / 2 / dt); k = int(round((tt - t0) / dt))
+        if k - hw - L < 0 or k + hw + L >= D.shape[1]:
+            return None
+        x = D[i, k - hw:k + hw + 1].astype(float); x -= x.mean()
+        best = (-1.0, 0.0)
+        for lag in range(-L, L + 1):
+            y = D[j, k - hw + lag:k + hw + 1 + lag].astype(float); y = y - y.mean()
+            c = float((x * y).sum() / (np.sqrt((x * x).sum() * (y * y).sum()) + 1e-12))
+            if c > best[0]:
+                best = (c, lag * dt)
+        return best
+    f = est(a, b, t, win_ms)
+    if not f or f[0] < min_ncc:
+        return None
+    r = est(b, a, t + f[1], win_ms)
+    g = est(a, b, t, win_ms * 1.5)
+    if not (r and g) or abs(f[1] + r[1]) > tol_ms or abs(f[1] - g[1]) > tol_ms:
+        return None
+    return f[1]
+
+
 def _line_viterbi(D: np.ndarray, t0: float, dt: float, guide: np.ndarray, sign: int, window_ms: float, hw: int,
                   w_jump: float, w_wave: float, w_guide: float, fault: np.ndarray | None,
-                  anchors: dict[int, float], w_anchor: float) -> tuple[np.ndarray, np.ndarray]:
+                  anchors: dict[int, float], w_anchor: float, fault_mode: str = "relax",
+                  max_throw_ms: float = 60.0) -> tuple[np.ndarray, np.ndarray]:
     """Optimal event path along one line (n_tr, nt) through candidate extrema."""
     n, nt = D.shape
     cands, waves = [], []
+    fz = np.zeros(n, bool) if fault is None else np.asarray(fault, bool)
+    near_fault = fz | np.r_[fz[1:], False] | np.r_[False, fz[:-1]] if fault_mode == "skip" else np.zeros(n, bool)
+    if fault_mode == "skip" and fault is not None:
+        near_fault = ndimage.binary_dilation(fz, iterations=2) & ~fz
     for k in range(n):
         g = guide[k]
         if not np.isfinite(g):
             cands.append(np.array([])); waves.append(None); continue
-        lo, hi = int(max(hw + 1, (g - window_ms - t0) / dt)), int(min(nt - hw - 2, (g + window_ms - t0) / dt))
+        wk = window_ms + (max_throw_ms if near_fault[k] else 0.0)
+        lo, hi = int(max(hw + 1, (g - wk - t0) / dt)), int(min(nt - hw - 2, (g + wk - t0) / dt))
         tr = D[k]
         ex = np.array([e for e in _extrema(tr[lo - 1:hi + 2], sign) + lo - 1 if hw <= e < nt - hw - 1], int)
         if not len(ex):
@@ -282,37 +316,55 @@ def _line_viterbi(D: np.ndarray, t0: float, dt: float, guide: np.ndarray, sign: 
         cands.append(tt); waves.append(W)
     twt = np.full(n, np.nan, np.float32)
     conf = np.zeros(n, np.float32)
-    k = 0
-    while k < n:                                   # each run of traces with candidates is solved separately
-        if not len(cands[k]):
-            k += 1; continue
-        s = k
-        while k < n and len(cands[k]):
-            k += 1
-        seg = range(s, k)
-        cost = [None] * (k - s)
-        back = [None] * (k - s)
+    # Nodes = traces with candidates outside fault zones. Consecutive nodes are linked; a gap made by a
+    # fault zone (≤ max_fault_gap traces) is crossed directly: the waveforms on both sides are compared
+    # and the time-jump penalty is nearly removed, so the path can follow the throw. Fault-zone traces
+    # stay unpicked. Larger gaps start a new, independent path.
+    infault = np.zeros(n, bool) if fault is None else np.asarray(fault, bool)
+    skip = fault_mode == "skip"
+    nodes = [k for k in range(n) if len(cands[k]) and not (skip and infault[k])]
+    max_fault_gap = 10
+    segs, cur = [], []
+    for k in nodes:
+        if cur and k - cur[-1] > max_fault_gap + 1:
+            segs.append(cur); cur = []
+        cur.append(k)
+    if cur:
+        segs.append(cur)
+    for seg in segs:
+        cost, back = [None] * len(seg), [None] * len(seg)
         for q, idx in enumerate(seg):
             u = w_guide * ((cands[idx] - guide[idx]) / window_ms) ** 2
             if idx in anchors:
                 u = u + w_anchor * ((cands[idx] - anchors[idx]) / 8.0) ** 2
             if q == 0:
                 cost[q] = u; continue
-            prev = idx - 1
+            prev = seg[q - 1]
+            gap = idx - prev
+            crosses_fault = (gap > 1 and infault[prev + 1:idx].any()) if skip else bool(infault[idx] or infault[prev])
             dtj = np.abs(cands[idx][:, None] - cands[prev][None, :])
-            jump_w = w_jump * (0.15 if fault is not None and (fault[idx] or fault[prev]) else 1.0)
             ncc = waves[idx] @ waves[prev].T
-            trans = jump_w * (dtj / 8.0) ** 2 + w_wave * (1 - ncc)
+            if crosses_fault and skip:
+                # reliable seismic throw estimate across the zone (forward/reverse/longer window agree)
+                est = _reliable_throw(D, t0, dt, prev, idx, float(np.nanmedian(cands[prev])), max_throw_ms)
+                if est is not None:
+                    dth = (cands[idx][:, None] - cands[prev][None, :]) - est
+                    trans = w_jump * (dth / 8.0) ** 2 + w_wave * (1 - ncc)
+                else:
+                    trans = w_jump * 0.02 * (dtj / 8.0) ** 2 + 1.5 * w_wave * (1 - ncc)
+            else:
+                jump_w = w_jump * 0.15 if crosses_fault else w_jump / gap
+                trans = jump_w * (dtj / 8.0) ** 2 + w_wave * (1 - ncc)
             tot = trans + cost[q - 1][None, :]
             back[q] = np.argmin(tot, axis=1)
             cost[q] = u + tot[np.arange(len(cands[idx])), back[q]]
         j = int(np.argmin(cost[-1]))
-        for q in range(k - s - 1, -1, -1):
-            idx = s + q
+        for q in range(len(seg) - 1, -1, -1):
+            idx = seg[q]
             twt[idx] = cands[idx][j]
             if q > 0:
                 jp = back[q][j]
-                conf[idx] = float(waves[idx][j] @ waves[idx - 1][jp])
+                conf[idx] = float(waves[idx][j] @ waves[seg[q - 1]][jp])
                 j = jp
             else:
                 conf[idx] = 1.0
@@ -322,7 +374,7 @@ def _line_viterbi(D: np.ndarray, t0: float, dt: float, guide: np.ndarray, sign: 
 def viterbi_track(cube: Cube, guide: np.ndarray, polarity: str = "trough", window_ms: float = 25.0,
                   waveform_ms: float = 24.0, w_jump: float = 1.0, w_wave: float = 2.0, w_guide: float = 0.5,
                   fault: np.ndarray | None = None, anchors: list[tuple[float, float, float]] | None = None,
-                  w_anchor: float = 5.0, second_window_ms: float = 12.0) -> tuple[Horizon, dict]:
+                  w_anchor: float = 5.0, second_window_ms: float = 12.0, fault_mode: str = "relax") -> tuple[Horizon, dict]:
     """Well-constrained global tracking. Pass 1: Viterbi along every inline through candidate
     events within ±window_ms of `guide`. Pass 2: Viterbi along every crossline using the
     smoothed pass-1 result as guide (±second_window_ms) for consistency between lines.
@@ -341,7 +393,7 @@ def viterbi_track(cube: Cube, guide: np.ndarray, polarity: str = "trough", windo
     for i in range(ni):
         anc = {j: t for (a, j), t in A.items() if abs(a - i) <= 1}
         p1[i], _ = _line_viterbi(np.asarray(D[i], float), cube.t0, cube.dt, guide[i], sign, window_ms, hw,
-                                 w_jump, w_wave, w_guide, None if fault is None else fault[i], anc, w_anchor)
+                                 w_jump, w_wave, w_guide, None if fault is None else fault[i], anc, w_anchor, fault_mode)
     g2 = ndimage.median_filter(np.where(np.isfinite(p1), p1, guide), size=5)
     twt = np.full((ni, nj), np.nan, np.float32)
     conf = np.zeros((ni, nj), np.float32)
@@ -349,9 +401,9 @@ def viterbi_track(cube: Cube, guide: np.ndarray, polarity: str = "trough", windo
         anc = {i: t for (i, b), t in A.items() if abs(b - j) <= 1}
         twt[:, j], conf[:, j] = _line_viterbi(np.asarray(D[:, j], float), cube.t0, cube.dt, g2[:, j], sign,
                                               second_window_ms, hw, w_jump, w_wave, w_guide,
-                                              None if fault is None else fault[:, j], anc, w_anchor)
+                                              None if fault is None else fault[:, j], anc, w_anchor, fault_mode)
     hz = Horizon(twt, conf)
     params = dict(method="viterbi", polarity=polarity, window_ms=window_ms, waveform_ms=waveform_ms, w_jump=w_jump,
-                  w_wave=w_wave, w_guide=w_guide, fault_aware=fault is not None, anchors=len(A),
+                  w_wave=w_wave, w_guide=w_guide, fault_aware=fault is not None, fault_mode=fault_mode, anchors=len(A),
                   second_window_ms=second_window_ms)
     return hz, {"params": params, **qc(hz)}

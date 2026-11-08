@@ -198,6 +198,8 @@ async def check_horizon_at_wells(ctx: RunContext[RunContext_], horizon: str) -> 
          "wells_over_20ms": res.loc[res.residual_ms.abs() > 20, "well"].tolist(),
          "residuals": df_brief(res.sort_values("residual_ms", key=lambda c: -c.abs()))}
     ctx.deps.state["last_residuals"] = res
+    ctx.deps.state["last_well_check"] = {"version": m.version, "mae_ms": d["mae_ms"], "max_abs_ms": d["max_abs_ms"],
+                                         "unpicked": d["unpicked_at_wells"], "tolerance_ms": max(8.0, d["tie_uncertainty_ms"])}
     return ctx.deps.record("check_horizon_at_wells", {"horizon": m.ref}, d)
 
 

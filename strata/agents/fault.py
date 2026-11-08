@@ -34,10 +34,15 @@ Domain guidance:
 VERIFY = ROLE + """
 
 TASK: VERIFY a horizon published by the horizon agent against your fault map, with
-check_horizon_vs_faults. Faults should explain the horizon's jumps: jumps far from faults are cycle
-skips or leaks onto another reflector; a horizon that crosses many faults with no offset at all was
-probably tracked straight across them. Pass when off-fault jumps are a small fraction of the picked
-area (guide: ≤ 3 % of picked traces) — cite the numbers, and give a concrete suggested_fix.
+check_horizon_vs_faults. Two tests, both from the seismic only:
+1. Off-fault jumps (neighbouring picks > 12 ms apart away from faults) are cycle skips or leaks onto
+   another reflector. Guide: ≤ 3 % of picked traces.
+2. Throw consistency: at each crossing of a long fault, the seismic offset is estimated by correlating
+   the traces on both sides; only self-consistent estimates are used (forward, reverse and a longer
+   window agree — reflections are periodic, single estimates can lock onto the wrong cycle). The
+   horizon's offset should match within 8 ms. Guide: ≤ 30 % of reliable crossings mismatched.
+Many map "faults" are small or noise — do not penalise flat crossings where the seismic shows no throw.
+Pass when both guides are met; cite the numbers and give a concrete suggested_fix.
 """
 
 
@@ -85,10 +90,12 @@ async def check_horizon_vs_faults(ctx: RunContext[RunContext_], horizon: str) ->
     m = ctx.deps.state.get("fault_mask")
     if m is None:
         return {"error": "no fault map published"}
-    r = F.horizon_vs_faults(hz.twt, m)
+    r0 = F.horizon_vs_faults(hz.twt, m)
     picked = int(np.isfinite(hz.twt).sum())
-    r["picked_traces"] = picked
-    r["off_fault_jumps_per_picked"] = round(r["jumps_off_faults"] / max(picked, 1), 4)
+    r = {"picked_traces": picked, "jumps_on_faults": r0["jumps_on_faults"], "jumps_off_faults": r0["jumps_off_faults"],
+         "off_fault_jumps_per_picked": round(r0["jumps_off_faults"] / max(picked, 1), 4),
+         "throw_consistency": F.throw_consistency(ctx.deps.cube, hz.twt, m)}
+    ctx.deps.state["last_fault_check"] = {"version": mobj.version, **r}
     return ctx.deps.record("check_horizon_vs_faults", {"horizon": mobj.ref}, r)
 
 
@@ -104,10 +111,15 @@ def build_produce(model_spec: str) -> Agent:
 def _scripted_verdict(R) -> dict:
     d = tool_return(R, "check_horizon_vs_faults") or {}
     frac = d.get("off_fault_jumps_per_picked")
-    ok = frac is not None and frac <= 0.03
-    return {"passed": ok, "summary": f"off-fault jumps {d.get('jumps_off_faults')} ({frac} of picked traces), "
-                                     f"crossings without offset {d.get('crossing_without_offset_frac')}",
-            "findings": [] if ok else ["too many jumps away from faults (cycle skips / leaks)"], "bad_wells": [],
+    tc = d.get("throw_consistency") or {}
+    mm = tc.get("mismatch_frac")
+    ok_j = frac is not None and frac <= 0.03
+    ok_t = mm is None or mm <= 0.30
+    ok = ok_j and ok_t
+    return {"passed": ok, "summary": f"off-fault jumps {frac} of picked (≤0.03), throw mismatch {mm} of "
+                                     f"{tc.get('reliable_throw_estimates')} reliable crossings (≤0.30)",
+            "findings": ([] if ok_j else ["too many jumps away from faults"]) + ([] if ok_t else ["horizon offsets disagree with seismic throws"]),
+            "bad_wells": [],
             "suggested_fix": "" if ok else "Use Viterbi tracking with the fault map and a tighter guide window."}
 
 

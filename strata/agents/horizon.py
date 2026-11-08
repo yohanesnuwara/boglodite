@@ -35,6 +35,12 @@ Workflow:
    > 12 ms apart = cycle skips or faults). Compare alternatives if useful.
 3. fill_and_smooth small gaps (do not fill large areas).
 4. publish_horizon with a short honest summary, then return your result.
+Trade-off to know (measured on this data with input-only checks): with the fault map, Viterbi crosses
+faults using the seismic throw, but only if the true event across the fault lies inside the candidate
+window — a narrow guide_window_ms (≤ 16 ms) keeps the horizon on the smooth well-guide surface, which
+reduces off-fault jumps yet prevents following fault throws (the fault verifier's second test). In a
+comparison, ±35 ms gave better throw consistency (0.31 vs 0.33 mismatch) and a lower well residual
+(6.1 vs 6.7 ms) than ±25 ms. Balance both fault tests and the well residual; do not optimise one alone.
 Parameter meaning: search_ms (how far to look for the next extremum), window_ms (waveform length
 compared), min_corr (0–1 acceptance threshold), max_step_ms (largest allowed change between traces).
 Stricter thresholds give fewer jumps but lower coverage.
@@ -64,8 +70,10 @@ async def track_horizon(ctx: RunContext[RunContext_], polarity: str, method: str
     """Track the horizon from the tied well tops (all tied wells if seed_wells is omitted), at the tied
     time + bulk_shift_ms, on events of `polarity` ('peak'|'trough').
     method='viterbi': global optimal path along every inline then crossline through candidate events
-      within ±guide_window_ms of a smooth surface through the tied tops; passes through the tied points;
-      fault-aware if use_fault_map and the fault agent published a FaultMap (throws allowed at faults).
+      within ±guide_window_ms of a smooth surface through the tied tops; passes through the tied points.
+      With use_fault_map and a published FaultMap it skips fault zones and crosses each fault using
+      the seismic throw estimated across it (when that estimate is self-consistent); fault-zone traces
+      stay unpicked.
     method='greedy': seeded region growing by trace-to-trace correlation (search_ms, window_ms, min_corr,
       max_step_ms), also restricted to ±guide_window_ms of the tied-top surface (0 = unguided)."""
     ties = _ties(ctx.deps)
@@ -80,7 +88,8 @@ async def track_horizon(ctx: RunContext[RunContext_], polarity: str, method: str
     fmask = ctx.deps.state.get("fault_mask") if use_fault_map else None
     if method == "viterbi":
         hz, rep = H.viterbi_track(cube, guide if guide is not None else H.guide_surface(cube, seeds), polarity,
-                                  window_ms=guide_window_ms or 30.0, fault=fmask, anchors=seeds)
+                                  window_ms=guide_window_ms or 30.0, fault=fmask, anchors=seeds,
+                                  fault_mode="skip" if fmask is not None else "relax")
     else:
         hz, rep = H.track(cube, seeds, polarity, search_ms, window_ms, min_corr, max_step_ms,
                           guide=guide, guide_window_ms=guide_window_ms)
@@ -145,7 +154,7 @@ def build(model_spec: str, name: str, rework: bool = False) -> Agent:
     def track_args(R):
         sr = tool_return(R, "seed_report") or {}
         pol = sr.get("expected_event_from_well_tie") or sr.get("polarity", {}).get("suggested", "peak")
-        return {"polarity": pol, "method": "viterbi", "guide_window_ms": 35.0 if not rework else 25.0}
+        return {"polarity": pol, "method": "viterbi", "guide_window_ms": 35.0}
 
     p = plan([("seed_report", {}), ("track_horizon", track_args), ("fill_and_smooth", {"max_gap_traces": 4}),
               ("publish_horizon", {"name": name, "summary": "Scripted track: suggested polarity, default parameters."})],
