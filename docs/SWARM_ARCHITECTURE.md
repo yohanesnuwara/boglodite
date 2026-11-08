@@ -60,6 +60,25 @@ target; deferred agents are listed in §2.1.
 | Inversion & rock physics | Well control is dense (≈ 46 wellbores) | property agent needs a secondary variable |
 | Handover | OPM Flow initialisation check comes later | connectivity metric is validated against flow |
 
+### 2.2 Skills per agent
+
+Each agent loads the `skills/geomodel-*/SKILL.md` files below as its domain
+knowledge (rules of thumb, thresholds, QC checklists, pitfalls). `geomodel-model-qc`
+is loaded by every agent acting as a verifier.
+
+| Agent | Skills |
+|---|---|
+| Data steward | `geomodel-data-readiness`, `geomodel-model-qc` |
+| Horizon agent | `geomodel-seismic-interpretation` |
+| Fault agent | `geomodel-seismic-interpretation`, `geomodel-structural-framework` (throw / juxtaposition checks) |
+| Well agent | `geomodel-petrophysics`, `geomodel-well-tie-depth-conversion`, `geomodel-well-log-upscaling` (as verifier) |
+| Structural framework agent | `geomodel-structural-framework`, `geomodel-uncertainty` (structural/GRV) |
+| Gridding agent | `geomodel-gridding-layering`, `geomodel-well-log-upscaling` (layering iteration) |
+| Property agent | `geomodel-well-log-upscaling`, `geomodel-facies-modelling`, `geomodel-property-modelling` |
+| Contacts & volumetrics agent | `geomodel-volumetrics`, `geomodel-uncertainty` |
+| Orchestrator | `geomodel-workflow`, `geomodel-model-qc`, `geomodel-uncertainty` |
+| Handover agent (deferred) | `geomodel-dynamic-handover` |
+
 ## 3. Project store (blackboard)
 
 Every object is a Pydantic model (metadata) plus a payload file in a standard
