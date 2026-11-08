@@ -25,11 +25,14 @@ seeded from the well agent's ties of the requested formation top. You cannot see
 verification until it is published; you will be told its findings if it rejects your horizon.
 
 Workflow:
-1. seed_report: for each tied well, the nearest peak and trough to the tied time; a polarity suggestion.
-   Decide the polarity and whether a bulk shift between tie time and the reflector is needed.
-2. track_horizon with seed wells of your choice (at least 3, spread across the field; using all tied
-   wells is allowed) and tracking parameters. Read the QC: coverage, confidence, and JUMPS (neighbouring
-   picks > 12 ms apart = cycle skips or crossing unrecognised faults). Iterate parameters if needed.
+1. seed_report: for each tied well, the nearest peak and trough to the (seismic-tied) top time, a
+   polarity suggestion, and the EXPECTED EVENT published by the well agent from synthetic seismograms.
+   The synthetic-tie event outranks amplitude heuristics. Decide the polarity.
+2. track_horizon. method='viterbi' (global, passes through the tied tops, follows fault throws when the
+   fault map is available) is usually more robust than 'greedy' region growing, which can leak onto
+   another reflector across faults. guide_window_ms bounds how far the horizon may depart from the
+   surface through the tied tops. Read the QC: coverage, confidence and JUMPS (neighbouring picks
+   > 12 ms apart = cycle skips or faults). Compare alternatives if useful.
 3. fill_and_smooth small gaps (do not fill large areas).
 4. publish_horizon with a short honest summary, then return your result.
 Parameter meaning: search_ms (how far to look for the next extremum), window_ms (waveform length
@@ -49,15 +52,22 @@ async def seed_report(ctx: RunContext[RunContext_], search_ms: float = 16.0) -> 
     snapped = H.snap_seeds(ctx.deps.cube, _ties(ctx.deps), search_ms)
     ctx.deps.state["snapped"] = snapped
     rep = H.polarity_report(snapped)
-    d = {"polarity": rep, "wells": df_brief(snapped)}
+    d = {"polarity": rep, "expected_event_from_well_tie": ctx.deps.state.get("expected_event"),
+         "wells": df_brief(snapped)}
     return ctx.deps.record("seed_report", {"search_ms": search_ms}, d)
 
 
-async def track_horizon(ctx: RunContext[RunContext_], polarity: str, seed_wells: list[str] | None = None,
-                        search_ms: float = 8.0, window_ms: float = 24.0, min_corr: float = 0.75,
-                        max_step_ms: float = 8.0, bulk_shift_ms: float = 0.0) -> dict:
-    """Track the horizon from the chosen seed wells (all tied wells if omitted). Seeds sit at the
-    tied time + bulk_shift_ms and snap to the nearest extremum of `polarity` ('peak'|'trough')."""
+async def track_horizon(ctx: RunContext[RunContext_], polarity: str, method: str = "viterbi",
+                        seed_wells: list[str] | None = None, guide_window_ms: float = 30.0,
+                        use_fault_map: bool = True, search_ms: float = 8.0, window_ms: float = 24.0,
+                        min_corr: float = 0.75, max_step_ms: float = 8.0, bulk_shift_ms: float = 0.0) -> dict:
+    """Track the horizon from the tied well tops (all tied wells if seed_wells is omitted), at the tied
+    time + bulk_shift_ms, on events of `polarity` ('peak'|'trough').
+    method='viterbi': global optimal path along every inline then crossline through candidate events
+      within ±guide_window_ms of a smooth surface through the tied tops; passes through the tied points;
+      fault-aware if use_fault_map and the fault agent published a FaultMap (throws allowed at faults).
+    method='greedy': seeded region growing by trace-to-trace correlation (search_ms, window_ms, min_corr,
+      max_step_ms), also restricted to ±guide_window_ms of the tied-top surface (0 = unguided)."""
     ties = _ties(ctx.deps)
     ties = ties[ties.in_cube & ties.twt.notna()]
     if seed_wells:
@@ -65,10 +75,19 @@ async def track_horizon(ctx: RunContext[RunContext_], polarity: str, seed_wells:
     if ties.empty:
         return {"error": "no usable seed wells"}
     seeds = [(r.il, r.xl, r.twt + bulk_shift_ms) for r in ties.itertuples()]
-    hz, rep = H.track(ctx.deps.cube, seeds, polarity, search_ms, window_ms, min_corr, max_step_ms)
+    cube = ctx.deps.cube
+    guide = H.guide_surface(cube, seeds) if guide_window_ms > 0 else None
+    fmask = ctx.deps.state.get("fault_mask") if use_fault_map else None
+    if method == "viterbi":
+        hz, rep = H.viterbi_track(cube, guide if guide is not None else H.guide_surface(cube, seeds), polarity,
+                                  window_ms=guide_window_ms or 30.0, fault=fmask, anchors=seeds)
+    else:
+        hz, rep = H.track(cube, seeds, polarity, search_ms, window_ms, min_corr, max_step_ms,
+                          guide=guide, guide_window_ms=guide_window_ms)
     ctx.deps.state["working_horizon"] = hz
     ctx.deps.state["working_params"] = {**rep["params"], "bulk_shift_ms": bulk_shift_ms,
-                                        "seed_wells": ties.well.tolist()}
+                                        "seed_wells": ties.well.tolist(), "method": method,
+                                        "fault_map_used": fmask is not None}
     rep["seed_wells"] = ties.well.tolist()
     return ctx.deps.record("track_horizon", ctx.deps.state["working_params"], rep)
 
@@ -124,13 +143,14 @@ def build(model_spec: str, name: str, rework: bool = False) -> Agent:
         return _spread_seeds(pd.DataFrame(rep.get("wells", [])), 3)
 
     def track_args(R):
-        rep = (tool_return(R, "seed_report") or {}).get("polarity", {})
-        return {"polarity": rep.get("suggested", "peak"), "seed_wells": seeds(R)}
+        sr = tool_return(R, "seed_report") or {}
+        pol = sr.get("expected_event_from_well_tie") or sr.get("polarity", {}).get("suggested", "peak")
+        return {"polarity": pol, "method": "viterbi", "guide_window_ms": 35.0 if not rework else 25.0}
 
     p = plan([("seed_report", {}), ("track_horizon", track_args), ("fill_and_smooth", {"max_gap_traces": 4}),
               ("publish_horizon", {"name": name, "summary": "Scripted track: suggested polarity, default parameters."})],
              lambda R: {"horizon_object": (tool_return(R, "publish_horizon") or {}).get("published", ""),
-                        "summary": "scripted", "polarity": track_args(R)["polarity"], "seed_wells": seeds(R),
+                        "summary": "scripted", "polarity": track_args(R)["polarity"], "seed_wells": [],
                         "params": {}})
     return Agent(make_model(model_spec, p), deps_type=RunContext_, output_type=HorizonResult,
                  instructions=INSTRUCTIONS, tools=[seed_report, track_horizon, fill_and_smooth, publish_horizon],

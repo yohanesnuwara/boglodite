@@ -101,12 +101,15 @@ def polarity_report(snapped: pd.DataFrame) -> dict:
 # ── tracking ─────────────────────────────────────────────────────────────────
 def track(cube: Cube, seeds: list[tuple[int, int, float]], polarity: str = "peak", search_ms: float = 8.0,
           window_ms: float = 24.0, min_corr: float = 0.75, max_step_ms: float = 8.0,
-          barrier: np.ndarray | None = None, max_traces: int | None = None) -> tuple[Horizon, dict]:
+          barrier: np.ndarray | None = None, max_traces: int | None = None,
+          guide: np.ndarray | None = None, guide_window_ms: float = 30.0) -> tuple[Horizon, dict]:
     """Region-growing tracker from seeds (il, xl, twt). Each step moves to a 4-neighbour,
     searches ±search_ms around the current time for an extremum of the chosen polarity,
     accepts the best normalised cross-correlation (≥ min_corr) of a ±window_ms waveform
     within max_step_ms. Traces with higher correlation are expanded first.
-    `barrier` (n_il, n_xl) bool marks traces the tracker may not enter (e.g. faults)."""
+    `barrier` (n_il, n_xl) bool marks traces the tracker may not enter (e.g. faults).
+    `guide` (n_il, n_xl) TWT surface (e.g. gridded well ties): candidates further than
+    guide_window_ms from it are rejected — stops leaking onto other reflectors across faults."""
     sign = 1 if polarity == "peak" else -1
     D = cube.data
     ni, nj, nt = D.shape
@@ -156,6 +159,8 @@ def track(cube: Cube, seeds: list[tuple[int, int, float]], polarity: str = "peak
             for e in ex:
                 if abs(e - k) > ms or e - hw < 0 or e + hw + 1 > nt:
                     continue
+                if guide is not None and np.isfinite(guide[a, b]) and abs(cube.t0 + e * cube.dt - guide[a, b]) > guide_window_ms:
+                    continue
                 c = _ncc(ref, np.asarray(D[a, b, e - hw:e + hw + 1], float))
                 if c > best_c + 1e-6 or (abs(c - best_c) <= 1e-6 and best is not None and abs(e - k) < abs(best - k)):
                     best, best_c = e, c
@@ -167,7 +172,8 @@ def track(cube: Cube, seeds: list[tuple[int, int, float]], polarity: str = "peak
             heapq.heappush(heap, (-best_c, a, b))
     hz = Horizon(twt, conf)
     params = dict(polarity=polarity, search_ms=search_ms, window_ms=window_ms, min_corr=min_corr,
-                  max_step_ms=max_step_ms, n_seeds=len(seeds))
+                  max_step_ms=max_step_ms, n_seeds=len(seeds), guided=guide is not None,
+                  guide_window_ms=guide_window_ms if guide is not None else None, barrier=barrier is not None)
     return hz, {"params": params, **qc(hz)}
 
 
@@ -237,3 +243,115 @@ def save(hz: Horizon, path) -> None:
 def load(path) -> Horizon:
     z = np.load(path)
     return Horizon(z["twt"], z["conf"])
+
+
+def guide_surface(cube: Cube, points: list[tuple[float, float, float]], smooth_traces: int = 15) -> np.ndarray:
+    """A smooth TWT trend surface through (il, xl, twt) well points: linear interpolation
+    inside the wells' hull, nearest-value outside, then Gaussian smoothing."""
+    from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+    p = np.array([(il - cube.ilines[0], xl - cube.xlines[0]) for il, xl, _ in points], float)
+    v = np.array([t for *_, t in points], float)
+    gi, gj = np.mgrid[0:cube.shape[0], 0:cube.shape[1]]
+    q = np.c_[gi.ravel(), gj.ravel()]
+    g = LinearNDInterpolator(p, v)(q) if len(p) >= 3 else np.full(len(q), np.nan)
+    nn = NearestNDInterpolator(p, v)(q)
+    g = np.where(np.isfinite(g), g, nn).reshape(cube.shape[:2])
+    return ndimage.gaussian_filter(g, smooth_traces) if smooth_traces else g
+
+
+# ── global tracking: Viterbi / dynamic programming along lines ───────────────
+def _line_viterbi(D: np.ndarray, t0: float, dt: float, guide: np.ndarray, sign: int, window_ms: float, hw: int,
+                  w_jump: float, w_wave: float, w_guide: float, fault: np.ndarray | None,
+                  anchors: dict[int, float], w_anchor: float) -> tuple[np.ndarray, np.ndarray]:
+    """Optimal event path along one line (n_tr, nt) through candidate extrema."""
+    n, nt = D.shape
+    cands, waves = [], []
+    for k in range(n):
+        g = guide[k]
+        if not np.isfinite(g):
+            cands.append(np.array([])); waves.append(None); continue
+        lo, hi = int(max(hw + 1, (g - window_ms - t0) / dt)), int(min(nt - hw - 2, (g + window_ms - t0) / dt))
+        tr = D[k]
+        ex = np.array([e for e in _extrema(tr[lo - 1:hi + 2], sign) + lo - 1 if hw <= e < nt - hw - 1], int)
+        if not len(ex):
+            cands.append(np.array([])); waves.append(None); continue
+        tt = np.array([t0 + _refine(tr, int(e)) * dt for e in ex])
+        W = np.stack([tr[e - hw:e + hw + 1] for e in ex]).astype(float)
+        W = W - W.mean(1, keepdims=True)
+        W /= np.linalg.norm(W, axis=1, keepdims=True) + 1e-9
+        cands.append(tt); waves.append(W)
+    twt = np.full(n, np.nan, np.float32)
+    conf = np.zeros(n, np.float32)
+    k = 0
+    while k < n:                                   # each run of traces with candidates is solved separately
+        if not len(cands[k]):
+            k += 1; continue
+        s = k
+        while k < n and len(cands[k]):
+            k += 1
+        seg = range(s, k)
+        cost = [None] * (k - s)
+        back = [None] * (k - s)
+        for q, idx in enumerate(seg):
+            u = w_guide * ((cands[idx] - guide[idx]) / window_ms) ** 2
+            if idx in anchors:
+                u = u + w_anchor * ((cands[idx] - anchors[idx]) / 8.0) ** 2
+            if q == 0:
+                cost[q] = u; continue
+            prev = idx - 1
+            dtj = np.abs(cands[idx][:, None] - cands[prev][None, :])
+            jump_w = w_jump * (0.15 if fault is not None and (fault[idx] or fault[prev]) else 1.0)
+            ncc = waves[idx] @ waves[prev].T
+            trans = jump_w * (dtj / 8.0) ** 2 + w_wave * (1 - ncc)
+            tot = trans + cost[q - 1][None, :]
+            back[q] = np.argmin(tot, axis=1)
+            cost[q] = u + tot[np.arange(len(cands[idx])), back[q]]
+        j = int(np.argmin(cost[-1]))
+        for q in range(k - s - 1, -1, -1):
+            idx = s + q
+            twt[idx] = cands[idx][j]
+            if q > 0:
+                jp = back[q][j]
+                conf[idx] = float(waves[idx][j] @ waves[idx - 1][jp])
+                j = jp
+            else:
+                conf[idx] = 1.0
+    return twt, np.clip(conf, 0, 1)
+
+
+def viterbi_track(cube: Cube, guide: np.ndarray, polarity: str = "trough", window_ms: float = 25.0,
+                  waveform_ms: float = 24.0, w_jump: float = 1.0, w_wave: float = 2.0, w_guide: float = 0.5,
+                  fault: np.ndarray | None = None, anchors: list[tuple[float, float, float]] | None = None,
+                  w_anchor: float = 5.0, second_window_ms: float = 12.0) -> tuple[Horizon, dict]:
+    """Well-constrained global tracking. Pass 1: Viterbi along every inline through candidate
+    events within ±window_ms of `guide`. Pass 2: Viterbi along every crossline using the
+    smoothed pass-1 result as guide (±second_window_ms) for consistency between lines.
+    `fault` (bool map) relaxes the time-jump penalty so paths can follow throws;
+    `anchors` (il, xl, twt) pull the path through tied well points."""
+    sign = 1 if polarity == "peak" else -1
+    D = cube.data
+    ni, nj, _ = D.shape
+    hw = max(2, int(round(waveform_ms / 2 / cube.dt)))
+    A = {}
+    for il, xl, t in anchors or []:
+        i, j = int(round(il - cube.ilines[0])), int(round(xl - cube.xlines[0]))
+        if 0 <= i < ni and 0 <= j < nj:
+            A[(i, j)] = t
+    p1 = np.full((ni, nj), np.nan, np.float32)
+    for i in range(ni):
+        anc = {j: t for (a, j), t in A.items() if abs(a - i) <= 1}
+        p1[i], _ = _line_viterbi(np.asarray(D[i], float), cube.t0, cube.dt, guide[i], sign, window_ms, hw,
+                                 w_jump, w_wave, w_guide, None if fault is None else fault[i], anc, w_anchor)
+    g2 = ndimage.median_filter(np.where(np.isfinite(p1), p1, guide), size=5)
+    twt = np.full((ni, nj), np.nan, np.float32)
+    conf = np.zeros((ni, nj), np.float32)
+    for j in range(nj):
+        anc = {i: t for (i, b), t in A.items() if abs(b - j) <= 1}
+        twt[:, j], conf[:, j] = _line_viterbi(np.asarray(D[:, j], float), cube.t0, cube.dt, g2[:, j], sign,
+                                              second_window_ms, hw, w_jump, w_wave, w_guide,
+                                              None if fault is None else fault[:, j], anc, w_anchor)
+    hz = Horizon(twt, conf)
+    params = dict(method="viterbi", polarity=polarity, window_ms=window_ms, waveform_ms=waveform_ms, w_jump=w_jump,
+                  w_wave=w_wave, w_guide=w_guide, fault_aware=fault is not None, anchors=len(A),
+                  second_window_ms=second_window_ms)
+    return hz, {"params": params, **qc(hz)}

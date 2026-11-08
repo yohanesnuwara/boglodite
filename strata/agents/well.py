@@ -12,6 +12,7 @@ from pydantic_ai import Agent, RunContext
 
 from strata.agents.common import RunContext_, df_brief, make_model, plan, skill, tool_return
 from strata.tools import horizon as H
+from strata.tools import welltie as WT
 
 
 class WellTieResult(BaseModel):
@@ -42,10 +43,13 @@ TASK: tie the formation top requested in the study brief to seismic time at ever
 1. Use list_markers to find the marker(s) that correspond to the requested surface. Picks exist in a
    2002 and a 2006 generation with different definitions; choose deliberately and say why.
 2. qc_td_tables to find inconsistent time–depth tables; exclude real outliers in the tie.
-3. tie_marker for the chosen marker (optionally a table-source preference order).
-4. Inspect table spread, the 'neighbour' wells (tied with nearby wells' tables) and wells outside the
-   seismic; note concerns.
-5. publish_ties, then return the result.
+3. tie_marker for the chosen marker (checkshot / time–depth conversion of the top).
+4. optimise_well_tie: synthetic seismograms at wells with sonic + density — this is the real well–
+   seismic tie. It gives the time correction at the top, the polarity and the EVENT (peak or trough)
+   the top falls on. Judge the ties: low correlation or a lag far from the others (e.g. a well tied
+   through a neighbour's table) is untrustworthy.
+5. publish_ties with apply_seismic_tie=True, your untrusted_tie_wells and the expected_event, then
+   return the result. Note concerns (neighbour-tied wells, low correlations, polarity disagreements).
 
 Domain guidance:
 """ + skill("geomodel-well-tie-depth-conversion")
@@ -113,11 +117,56 @@ async def tie_marker(ctx: RunContext[RunContext_], marker: str, td_preference: l
                                           "exclude_tables": exclude_tables}, d)
 
 
-async def publish_ties(ctx: RunContext[RunContext_], marker: str, notes: str) -> dict:
-    """Publish the well ties of `marker` to the project store."""
+async def optimise_well_tie(ctx: RunContext[RunContext_], marker: str, stretch_max_ms: float = 8.0,
+                            roughness_weight: float = 0.02, half_window_ms: float = 150.0) -> dict:
+    """Well–seismic tie at every well with sonic + density: synthetic seismogram, global optimisation
+    of bulk shift / phase / wavelet frequency, then regularised stretch & squeeze. Returns per well the
+    correlation (bulk and stretched), polarity, the time correction at the top (lag_at_top_ms) and the
+    event (peak/trough) the top falls on."""
+    from strata.data import read_logs
     ties = ctx.deps.state.get("ties", {}).get(marker)
     if ties is None:
         return {"error": "call tie_marker first"}
+    res, curves = WT.optimise_tie(ctx.deps.cube, ctx.deps.wells, read_logs(), ties, half_window_ms=half_window_ms,
+                                  stretch_max_ms=stretch_max_ms, roughness_weight=roughness_weight)
+    ctx.deps.state["opt_ties"] = res
+    ctx.deps.state["lag_curves"] = curves
+    d = {"wells_tied_to_seismic": len(res), "median_lag_at_top_ms": float(res.lag_at_top_ms.median()) if len(res) else None,
+         "corr_bulk_median": float(res.corr_bulk.median()) if len(res) else None,
+         "corr_stretched_median": float(res.corr_stretched.median()) if len(res) else None,
+         "event_at_top_votes": res.event_at_top.value_counts().to_dict() if len(res) else {},
+         "polarity_votes": res.polarity.value_counts().to_dict() if len(res) else {},
+         "wells": df_brief(res.drop(columns=["td_relation"])) if len(res) else []}
+    return ctx.deps.record("optimise_well_tie", {"marker": marker, "stretch_max_ms": stretch_max_ms,
+                                                 "roughness_weight": roughness_weight, "half_window_ms": half_window_ms}, d)
+
+
+async def publish_ties(ctx: RunContext[RunContext_], marker: str, notes: str, apply_seismic_tie: bool = True,
+                       untrusted_tie_wells: list[str] | None = None, expected_event: str | None = None) -> dict:
+    """Publish the well ties of `marker`. With apply_seismic_tie, each top time is corrected by its
+    well's lag_at_top_ms from optimise_well_tie; wells without a seismic tie (or listed in
+    untrusted_tie_wells) get the median lag. expected_event ('peak'|'trough') is published for the
+    horizon agent."""
+    ties = ctx.deps.state.get("ties", {}).get(marker)
+    if ties is None:
+        return {"error": "call tie_marker first"}
+    ties = ties.copy()
+    opt = ctx.deps.state.get("opt_ties")
+    ties["seismic_lag_ms"] = 0.0
+    ties["tie_corr"] = np.nan
+    if apply_seismic_tie and opt is not None and len(opt):
+        bad = set(untrusted_tie_wells or [])
+        good = opt[~opt.well.isin(bad)]
+        med = float(good.lag_at_top_ms.median()) if len(good) else 0.0
+        lag = dict(zip(good.well, good.lag_at_top_ms))
+        corr = dict(zip(opt.well, opt.corr_stretched))
+        ties["seismic_lag_ms"] = [lag.get(w, med) for w in ties.well]
+        ties["tie_corr"] = [corr.get(w, np.nan) for w in ties.well]
+        ties["twt_checkshot"] = ties.twt
+        ties["twt"] = ties.twt + ties.seismic_lag_ms
+    ties["expected_event"] = expected_event
+    ctx.deps.state["ties"][marker] = ties
+    ctx.deps.state["expected_event"] = expected_event
 
     def write(d):
         ties.drop(columns=["all_tables"]).to_csv(d / "ties.csv", index=False)
@@ -165,13 +214,22 @@ def build_tie(model_spec: str, target: str) -> Agent:
         q = tool_return(R, "qc_td_tables") or {}
         return {**_scripted_marker(R, target), "exclude_tables": q.get("outliers", [])}
 
+    def publish_args(R):
+        o = tool_return(R, "optimise_well_tie") or {}
+        med = o.get("median_lag_at_top_ms") or 0.0
+        bad = [w["well"] for w in o.get("wells", []) if abs(w["lag_at_top_ms"] - med) > 20 or w["corr_stretched"] < 0.5]
+        votes = o.get("event_at_top_votes") or {}
+        return {"marker": _scripted_marker(R, target)["marker"], "notes": "scripted", "apply_seismic_tie": True,
+                "untrusted_tie_wells": bad, "expected_event": max(votes, key=votes.get) if votes else None}
+
     p = plan([("list_markers", {"pattern": target}), ("qc_td_tables", {}),
               ("tie_marker", tie_args),
-              ("publish_ties", lambda R: {"marker": _scripted_marker(R, target)["marker"], "notes": "scripted"})],
+              ("optimise_well_tie", lambda R: _scripted_marker(R, target)),
+              ("publish_ties", publish_args)],
              lambda R: {"marker": _scripted_marker(R, target)["marker"], "ties_object": "", "wells_tied": 0,
                         "summary": "Scripted tie: marker with most wells matching the target.", "concerns": []})
     return Agent(make_model(model_spec, p), deps_type=RunContext_, output_type=WellTieResult,
-                 instructions=TIE_INSTRUCTIONS, tools=[list_markers, qc_td_tables, tie_marker, publish_ties],
+                 instructions=TIE_INSTRUCTIONS, tools=[list_markers, qc_td_tables, tie_marker, optimise_well_tie, publish_ties],
                  name="well_agent")
 
 

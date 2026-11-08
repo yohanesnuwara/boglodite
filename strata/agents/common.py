@@ -22,7 +22,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from strata.config import REPO
 from strata.store import Store, ToolCall
 
-DEFAULT_MODEL = "anthropic:claude-sonnet-5-5"
+DEFAULT_MODEL = "anthropic:claude-opus-5-5"
 
 
 @dataclass

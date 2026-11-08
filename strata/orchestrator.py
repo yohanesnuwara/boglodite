@@ -22,6 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Literal
 
+from strata.agents import fault as FA
 from strata.agents import horizon as HA
 from strata.agents import steward as SA
 from strata.agents import well as WA
@@ -119,10 +120,13 @@ class Orchestrator:
         if g1 == "stop":
             return
 
-        s.emit("phase", "orchestrator", phase="Well ties")
-        tie = await run_agent(WA.build_tie(c.model, c.target), ctx, "well_agent",
-                              f"Study brief: {c.brief}\nTie the corresponding formation top to seismic time at every well.",
-                              c.model)
+        s.emit("phase", "orchestrator", phase="Well ties ‖ fault map (parallel)")
+        ctx_f = RunContext_(store=s, state=ctx.state)          # shared state, separate agent identity
+        tie, _faults = await asyncio.gather(
+            run_agent(WA.build_tie(c.model, c.target), ctx, "well_agent",
+                      f"Study brief: {c.brief}\nTie the corresponding formation top to seismic time at every well.", c.model),
+            run_agent(FA.build_produce(c.model), ctx_f, "fault_agent",
+                      f"Study brief: {c.brief}\nBuild the fault map of the reservoir interval.", c.model))
         s.emit("phase", "orchestrator", phase="Horizon interpretation")
         findings = ""
         verdicts = []
@@ -133,18 +137,30 @@ class Orchestrator:
                 prompt += f"\n\nThe well agent REJECTED your previous version. Its findings:\n{findings}\nRework the horizon."
             await run_agent(HA.build(c.model, c.horizon_name, rework=rnd > 1), ctx, "horizon_agent", prompt, c.model)
             m = s.get("HorizonPicks", c.horizon_name)
-            v = await run_agent(WA.build_verify(c.model, c.horizon_name), ctx, "well_agent_verifier",
-                                f"Verify HorizonPicks:{c.horizon_name} (version {m.version}) against your ties.", c.model)
-            s.add_verdict(m, Verdict(verifier="well_agent", passed=v.passed, summary=v.summary, findings=v.findings,
-                                     evidence={"residuals": "check_horizon_at_wells", "bad_wells": v.bad_wells}, round=rnd))
+            ctx_v = RunContext_(store=s, state=ctx.state)
+            vw, vf = await asyncio.gather(
+                run_agent(WA.build_verify(c.model, c.horizon_name), ctx, "well_agent_verifier",
+                          f"Verify HorizonPicks:{c.horizon_name} (version {m.version}) against your ties.", c.model),
+                run_agent(FA.build_verify(c.model, c.horizon_name), ctx_v, "fault_agent_verifier",
+                          f"Verify HorizonPicks:{c.horizon_name} (version {m.version}) against your fault map.", c.model))
+            for who, v in (("well_agent", vw), ("fault_agent", vf)):
+                m = s.add_verdict(s.get("HorizonPicks", c.horizon_name, m.version),
+                                  Verdict(verifier=who, passed=v.passed, summary=v.summary, findings=v.findings,
+                                          evidence={"bad_wells": v.bad_wells}, round=rnd))
+            passed = vw.passed and vf.passed
+            if not passed:                                   # status reflects the combined verdict
+                m = s.set_status(m, "rejected")
+            v = vw if not vw.passed else vf
             verdicts.append((m.version, v))
-            if v.passed or rnd > MAX_ROUNDS:
+            if passed or rnd > MAX_ROUNDS:
                 break
-            findings = json.dumps({"summary": v.summary, "findings": v.findings, "bad_wells": v.bad_wells,
-                                   "suggested_fix": v.suggested_fix}, indent=1)
+            findings = json.dumps({who: {"passed": vv.passed, "summary": vv.summary, "findings": vv.findings,
+                                         "bad_wells": vv.bad_wells, "suggested_fix": vv.suggested_fix}
+                                   for who, vv in (("well_agent", vw), ("fault_agent", vf))}, indent=1)
 
         final = s.get("HorizonPicks", c.horizon_name)
-        if not verdicts[-1][1].passed:
+        final_passed = all(vd.passed for vd in final.verdicts if vd.round == final.verdicts[-1].round) if final.verdicts else False
+        if not final_passed:
             s.emit("ledger", "orchestrator", scenario=f"{c.horizon_name}: unresolved after {MAX_ROUNDS} reworks",
                    object=final.id, versions=[vv for vv, _ in verdicts])
             choice = await self.ask("Horizon still rejected after two reworks",

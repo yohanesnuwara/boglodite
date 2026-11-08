@@ -258,3 +258,52 @@ class Wells:
                          "n_tables": len(times), "table_spread_ms": float(np.ptp(vals)) if len(vals) > 1 else 0.0,
                          "all_tables": times})
         return pd.DataFrame(rows)
+
+
+# ── well logs (LAS) ──────────────────────────────────────────────────────────
+LOG_CURVES = ("DT", "RHOB", "GR", "VSH", "PHIF", "NPHI")
+
+
+def _read_las(path: Path) -> pd.DataFrame:
+    """Minimal LAS 2 reader: ~C curve names, ~A data, NULL from ~W."""
+    names, null, rows, sect = [], -999.25, [], ""
+    for line in path.read_text(errors="replace").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        if s.startswith("~"):
+            sect = s[1].upper()
+            continue
+        if sect == "W" and s.upper().startswith("NULL"):
+            try:
+                null = float(s.split(":")[0].split()[-1])
+            except ValueError:
+                pass
+        elif sect == "C":
+            names.append(s.split(".")[0].strip())
+        elif sect == "A":
+            rows.append(s.split())
+    df = pd.DataFrame([r for r in rows if len(r) == len(names)], columns=names).apply(pd.to_numeric, errors="coerce")
+    return df.replace(null, np.nan)
+
+
+def _las_key(path: Path) -> str:
+    m = re.match(r"6608(\d\d)-(.+)\.las$", path.name)
+    return nio.norm_well(f"6608/{m.group(1)}-{m.group(2)}") if m else path.stem
+
+
+def read_logs() -> dict[str, pd.DataFrame]:
+    """{well key: DataFrame(MD, TVDSS, DT, RHOB, …)} for the non-blind wells, cached locally."""
+    cache = CACHE_DIR / "well_logs.pkl"
+    if cache.exists():
+        logs = pd.read_pickle(cache)
+    else:
+        logs = {}
+        for f in sorted(input_path("wells/well_logs").glob("*.las")):
+            df = _read_las(f)
+            keep = [c for c in ("DEPTH", "TVDSS", *LOG_CURVES) if c in df.columns]
+            logs[_las_key(f)] = df[keep].rename(columns={"DEPTH": "MD"})
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        pd.to_pickle(logs, cache)
+    blind = blind_wells()
+    return {k: v for k, v in logs.items() if k not in blind}
