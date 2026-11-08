@@ -11,6 +11,7 @@ variables under test.
 
 Code: `norne_benchmark/` (readers/writer in `io.py`, baseline in `baseline.py`, scorer in `score.py`, scorer self-test in `selftest.py`).
 Viewer: `sandbox/norne_viewer.py` → `tmp/norne_3d.html`.
+Swarm architecture (agents, project store, verification pairs, run layout): [`SWARM_ARCHITECTURE.md`](./SWARM_ARCHITECTURE.md).
 
 ---
 
