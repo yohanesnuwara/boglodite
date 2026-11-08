@@ -16,8 +16,8 @@ async def main(page: str, out: str, width: int = 1500) -> None:
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
-        await pg.goto(Path(page).resolve().as_uri())
-        await pg.wait_for_timeout(7000)
+        await pg.goto(page if page.startswith("http") else Path(page).resolve().as_uri())
+        await pg.wait_for_timeout(int(sys.argv[4]) if len(sys.argv) > 4 else 7000)
         await pg.screenshot(path=out, full_page=True)
         print("errors:", errs)
         await b.close()

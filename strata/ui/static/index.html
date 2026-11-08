@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strata Workbench</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+    <span class="brand-name">STRATA</span>
+    <span class="brand-sub">geomodelling swarm · Norne</span>
+  </div>
+  <div class="topbar-controls">
+    <label class="ctl brief"><span class="ctl-label">BRIEF</span><input id="brief" type="text"></label>
+    <label class="ctl"><span class="ctl-label">TARGET</span><input id="target" type="text" value="Not 2" size="7"></label>
+    <label class="ctl"><span class="ctl-label">MODEL</span><select id="model"></select></label>
+    <label class="ctl"><span class="ctl-label">AUTONOMY</span><select id="autonomy"></select></label>
+    <button id="runBtn" class="run-btn">▶ RUN</button>
+    <label class="ctl"><span class="ctl-label">RUN</span><select id="runSelect"></select></label>
+    <span id="state" class="state idle">IDLE</span>
+  </div>
+</header>
+
+<main id="layout">
+  <aside id="left" class="col">
+    <section class="panel">
+      <div class="ph">PROJECT EXPLORER</div>
+      <div id="explorer" class="scroll"><div class="empty">No run selected.</div></div>
+    </section>
+    <section class="panel">
+      <div class="ph">AGENTS</div>
+      <div id="agents" class="scroll"></div>
+    </section>
+  </aside>
+
+  <section id="center" class="col">
+    <div class="viewer-bar">
+      <span class="seg" id="viewSeg"><button data-v="inline" aria-pressed="true">INLINE</button><button data-v="xline" aria-pressed="false">XLINE</button><button data-v="time" aria-pressed="false">TIME</button><button data-v="map" aria-pressed="false">MAP</button></span>
+      <input type="range" id="slider"><code id="sliderVal">–</code>
+      <span class="seg" id="mapSeg" hidden><button data-m="twt" aria-pressed="true">TWT</button><button data-m="conf" aria-pressed="false">CONFIDENCE</button><button data-m="jumps" aria-pressed="false">JUMPS</button></span>
+      <label class="ctl"><input type="checkbox" id="ovHz" checked> horizon</label>
+      <label class="ctl"><input type="checkbox" id="ovTies" checked> well ties</label>
+      <span class="ctl-label">VERSION</span><select id="hzVersion"></select>
+    </div>
+    <div id="view"><canvas id="cv"></canvas><div id="hud"></div><div id="legend"></div></div>
+  </section>
+
+  <aside id="right" class="col">
+    <section class="panel">
+      <div class="ph">INBOX <span id="inboxCount"></span></div>
+      <div id="inbox" class="scroll"><div class="empty">No decisions waiting.</div></div>
+    </section>
+    <section class="panel">
+      <div class="ph">VERDICTS</div>
+      <div id="verdicts" class="scroll"></div>
+    </section>
+    <section class="panel">
+      <div class="ph">INSPECTOR</div>
+      <div id="inspector" class="scroll"><div class="empty">Click an object in the explorer.</div></div>
+    </section>
+    <section class="panel" id="benchPanel" hidden>
+      <div class="ph">BENCHMARK <span class="muted">(after run)</span></div>
+      <div id="bench" class="scroll"></div>
+    </section>
+  </aside>
+</main>
+
+<footer id="timeline">
+  <div class="ph">TIMELINE <span class="muted" id="evCount"></span></div>
+  <div id="events" class="scroll"></div>
+</footer>
+<div id="tip" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
