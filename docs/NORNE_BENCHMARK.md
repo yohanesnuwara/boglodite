@@ -360,6 +360,17 @@ statistics. **Caveat:** the 2003 file on this copy covers only IL 821–992 (and
 north-western end of the reservoir; the 15 ms tolerance rests on that strip. Where the tail sits (near faults, at the survey edge) is not yet
 analysed.
 
+### 10.3b Input-to-truth floor for the time horizon (2026-11-08)
+
+Not 2 NO 2006 Top picks converted to time with the INPUT time–depth tables differ from the
+reference 2006 Not 2 horizon by **MAE 22.2 ms** (median: ties 11 ms deeper; E-4 area 60–90 ms).
+The reference sits on a **trough** at 81 % of locations (peak 15 %, lateral dimming/reversal around
+IL 1080–1160 × XL 2000–2100). The reference was depth/time-converted with a different model (TDQ),
+not the well time–depth tables. A horizon tied perfectly to the INPUT checkshot times would therefore
+score ≈ 22 ms; synthetic-seismogram ties recover part of the offset (median −10.6 ms). The tolerance
+stays at 15 ms; the floor is reported alongside (score info `input_floor_ms`), like the 6.6 m blind-
+well floor in depth.
+
 ### 10.4 Faults
 - Grid fault faces (ZCORN throw > 0.5 m): 11,520 I-faces + 2,922 J-faces. FAULTS keyword: 61 faults, 19,866 faces, of which 74 % carry throw (the rest are zero-throw transmissibility barriers or boundary faces).
 - 2006 depth sticks over the active reservoir: 62 faults, 32,447 points (10 m densified).
