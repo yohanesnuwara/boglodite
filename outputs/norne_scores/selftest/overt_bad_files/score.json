@@ -1,0 +1,61 @@
+{
+  "candidate": "/home/yohanuwa/projects/boglodite/outputs/norne_scores/selftest/overt_bad_files",
+  "manifest": {},
+  "composite": 0.0,
+  "stages_scored": [
+    "S2",
+    "S4",
+    "S5",
+    "S6",
+    "S7"
+  ],
+  "stage_coverage": 0.9,
+  "stages": {
+    "S2": {
+      "score": 0.0,
+      "outcome": "overt_failure",
+      "overt": "faults.csv missing columns ['fault', 'stick']",
+      "metrics": {},
+      "info": {}
+    },
+    "S4": {
+      "score": 0.0,
+      "outcome": "overt_failure",
+      "overt": "grid.grdecl unreadable: cannot reshape array of size 6 into shape (113,47,6)",
+      "metrics": {},
+      "info": {}
+    },
+    "S5": {
+      "score": 0.0,
+      "outcome": "overt_failure",
+      "overt": "grid.grdecl unreadable: cannot reshape array of size 6 into shape (113,47,6)",
+      "metrics": {},
+      "info": {}
+    },
+    "S6": {
+      "score": 0.0,
+      "outcome": "overt_failure",
+      "overt": "grid.grdecl unreadable: cannot reshape array of size 6 into shape (113,47,6)",
+      "metrics": {},
+      "info": {}
+    },
+    "S7": {
+      "score": 0.0,
+      "outcome": "overt_failure",
+      "overt": "grid.grdecl unreadable: cannot reshape array of size 6 into shape (113,47,6)",
+      "metrics": {},
+      "info": {}
+    }
+  },
+  "tau": {
+    "depth_m": 10.0,
+    "fault_m": 100.0,
+    "time_ms": 15.0,
+    "vol_rel": 0.05,
+    "frac": 0.25,
+    "poro": 0.02,
+    "ntg": 0.05,
+    "logk": 0.3
+  },
+  "seconds": 0.0
+}

@@ -1,0 +1,57 @@
+[
+ {
+  "case": "peak, no shift (old)",
+  "secs": 16.9,
+  "coverage": 0.9856,
+  "jumps": 20661,
+  "truth_mae": 88.5,
+  "truth_median": 49.3,
+  "bias": -61.4,
+  "crossing_flat": 0.914,
+  "off_fault_jumps": 0.819
+ },
+ {
+  "case": "trough, shift -11.5",
+  "secs": 17.4,
+  "coverage": 0.9855,
+  "jumps": 22645,
+  "truth_mae": 81.3,
+  "truth_median": 53.4,
+  "bias": -45.1,
+  "crossing_flat": 0.907,
+  "off_fault_jumps": 0.809
+ },
+ {
+  "case": "trough, shift -11.5, barrier p92",
+  "secs": 14.6,
+  "coverage": 0.9133,
+  "jumps": 18192,
+  "truth_mae": 78.8,
+  "truth_median": 49.6,
+  "bias": -32.0,
+  "crossing_flat": 0.904,
+  "off_fault_jumps": 0.915
+ },
+ {
+  "case": "trough, shift -11.5, barrier p88",
+  "secs": 14.4,
+  "coverage": 0.8555,
+  "jumps": 14844,
+  "truth_mae": 96.3,
+  "truth_median": 78.0,
+  "bias": -19.2,
+  "crossing_flat": 0.925,
+  "off_fault_jumps": 0.956
+ },
+ {
+  "case": "trough, shift -11.5, barrier p88, corr .85",
+  "secs": 15.2,
+  "coverage": 0.8334,
+  "jumps": 11491,
+  "truth_mae": 94.4,
+  "truth_median": 79.9,
+  "bias": -28.0,
+  "crossing_flat": 0.926,
+  "off_fault_jumps": 0.96
+ }
+]

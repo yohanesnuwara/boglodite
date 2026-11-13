@@ -1,0 +1,78 @@
+{
+ "dip (wells only) \u00b7 surface": {
+  "well_mae": 0.45,
+  "off_fault_jumps": 0.0,
+  "throw_mismatch": 0.481,
+  "dip_misfit_mean_ms": 0.293,
+  "dip_misfit_frac_over_tol": 0.0001,
+  "pairs": 594461,
+  "tol_ms": 4.0,
+  "coverage": 1.0
+ },
+ "dip (wells only) \u00b7 snapped": {
+  "well_mae": 5.35,
+  "off_fault_jumps": 0.0118,
+  "throw_mismatch": 0.307,
+  "dip_misfit_mean_ms": 0.922,
+  "dip_misfit_frac_over_tol": 0.0398,
+  "pairs": 486147,
+  "tol_ms": 4.0,
+  "coverage": 0.826
+ },
+ "dip + NCS level \u00b7 surface": {
+  "well_mae": 0.49,
+  "off_fault_jumps": 0.0,
+  "throw_mismatch": 0.509,
+  "dip_misfit_mean_ms": 0.637,
+  "dip_misfit_frac_over_tol": 0.0012,
+  "pairs": 594120,
+  "tol_ms": 4.0,
+  "coverage": 1.0
+ },
+ "dip + NCS level \u00b7 snapped": {
+  "well_mae": 5.88,
+  "off_fault_jumps": 0.0222,
+  "throw_mismatch": 0.417,
+  "dip_misfit_mean_ms": 1.13,
+  "dip_misfit_frac_over_tol": 0.0578,
+  "pairs": 464100,
+  "tol_ms": 4.0,
+  "coverage": 0.795
+ },
+ "Opus v3": {
+  "dip_misfit_mean_ms": 0.988,
+  "dip_misfit_frac_over_tol": 0.0214,
+  "pairs": 466523,
+  "tol_ms": 4.0
+ },
+ "scripted NCS": {
+  "dip_misfit_mean_ms": 2.062,
+  "dip_misfit_frac_over_tol": 0.0678,
+  "pairs": 586067,
+  "tol_ms": 4.0
+ },
+ "TRUTH dip_wells_only surface": {
+  "time_mae": 19.99,
+  "time_rmse": 30.14,
+  "coverage": 0.98,
+  "time_bias": -3.44
+ },
+ "TRUTH dip_wells_only snapped+surface fill": {
+  "time_mae": 19.43,
+  "time_rmse": 30.67,
+  "coverage": 0.98,
+  "time_bias": -3.99
+ },
+ "TRUTH dip_plus_NCS_level surface": {
+  "time_mae": 16.85,
+  "time_rmse": 23.65,
+  "coverage": 0.98,
+  "time_bias": 2.68
+ },
+ "TRUTH dip_plus_NCS_level snapped+surface fill": {
+  "time_mae": 15.16,
+  "time_rmse": 23.31,
+  "coverage": 0.98,
+  "time_bias": 2.95
+ }
+}

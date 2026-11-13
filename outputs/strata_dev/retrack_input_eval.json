@@ -1,0 +1,42 @@
+{
+ "20261108-193053-2632 before": {
+  "well_mae_ms": 5.81,
+  "off_fault_jumps": 0.0212,
+  "throw_mismatch": 0.474,
+  "event_amp": 1.233,
+  "coverage": 0.97,
+  "TRUTH_time_mae": 21.29,
+  "TRUTH_coverage": 0.985,
+  "TRUTH_bias": 1.49
+ },
+ "20261108-193053-2632 after": {
+  "well_mae_ms": 6.44,
+  "off_fault_jumps": 0.0709,
+  "throw_mismatch": 0.328,
+  "event_amp": 1.534,
+  "coverage": 0.97,
+  "TRUTH_time_mae": 20.72,
+  "TRUTH_coverage": 0.985,
+  "TRUTH_bias": 1.04
+ },
+ "20261108-191746-623a before": {
+  "well_mae_ms": 6.54,
+  "off_fault_jumps": 0.0697,
+  "throw_mismatch": 0.286,
+  "event_amp": 1.492,
+  "coverage": 0.958,
+  "TRUTH_time_mae": 20.6,
+  "TRUTH_coverage": 0.984,
+  "TRUTH_bias": 1.31
+ },
+ "20261108-191746-623a after": {
+  "well_mae_ms": 6.54,
+  "off_fault_jumps": 0.0661,
+  "throw_mismatch": 0.296,
+  "event_amp": 1.768,
+  "coverage": 0.959,
+  "TRUTH_time_mae": 19.37,
+  "TRUTH_coverage": 0.984,
+  "TRUTH_bias": 1.19
+ }
+}

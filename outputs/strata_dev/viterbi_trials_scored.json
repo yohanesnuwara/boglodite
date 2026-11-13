@@ -1,0 +1,34 @@
+[
+ {
+  "case": "viterbi \u00b125",
+  "secs": 26.4,
+  "time_mae": 21.9,
+  "coverage": 0.985,
+  "bias": 1.3,
+  "jumps": 21363
+ },
+ {
+  "case": "viterbi \u00b125 fault-aware",
+  "secs": 25.0,
+  "time_mae": 22.2,
+  "coverage": 0.985,
+  "bias": 1.4,
+  "jumps": 21787
+ },
+ {
+  "case": "viterbi \u00b135 fault-aware",
+  "secs": 29.3,
+  "time_mae": 20.4,
+  "coverage": 0.985,
+  "bias": 2.1,
+  "jumps": 24187
+ },
+ {
+  "case": "viterbi \u00b120 fault-aware",
+  "secs": 28.0,
+  "time_mae": 22.3,
+  "coverage": 0.984,
+  "bias": 1.7,
+  "jumps": 18851
+ }
+]

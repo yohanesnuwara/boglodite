@@ -1,0 +1,9 @@
+well,td_relation,corr,polarity_sign,lag_ms,tie_twt,corrected_twt,event_at_top,log_samples
+6608/10-B-4AH,own:bosd_TDmodel,0.758,1,-25,2427.2,2402.2,trough,5865
+6608/10-B-4H,own:td_par,0.784,1,-12,2442.1,2430.1,trough,2795
+6608/10-C-1H,own:td_par,0.897,1,-8,2453.7,2445.7,trough,3110
+6608/10-C-3H,own:td_par,0.625,1,-11,2474.7,2463.7,trough,3447
+6608/10-C-4AH,neighbour:6608/10-C-1H:td_par,0.858,-1,15,2508.2,2523.2,trough,2383
+6608/10-C-4H,own:td_vsp,0.918,-1,-25,2445.6,2420.6,peak,2396
+6608/10-E-3H,own:td_vsp,0.795,1,-10,2461.8,2451.8,trough,4370
+6608/10-F-1H,own:TIME-CKS,0.546,1,-14,2523.8,2509.8,trough,4733

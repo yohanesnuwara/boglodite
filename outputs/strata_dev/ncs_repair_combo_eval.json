@@ -1,0 +1,34 @@
+{
+ "20261108-201137-9b63 NCS": {
+  "INPUT_well_mae": 6.53,
+  "INPUT_off_fault_jumps": 0.0845,
+  "INPUT_throw_mismatch": 0.429,
+  "TRUTH_mae": 15.66,
+  "TRUTH_rmse": 28.89,
+  "TRUTH_cov": 0.985
+ },
+ "20261108-201137-9b63 NCS+repair": {
+  "INPUT_well_mae": 6.88,
+  "INPUT_off_fault_jumps": 0.0897,
+  "INPUT_throw_mismatch": 0.358,
+  "TRUTH_mae": 14.53,
+  "TRUTH_rmse": 28.1,
+  "TRUTH_cov": 0.985
+ },
+ "20261108-200629-9025 NCS": {
+  "INPUT_well_mae": 6.54,
+  "INPUT_off_fault_jumps": 0.0953,
+  "INPUT_throw_mismatch": 0.32,
+  "TRUTH_mae": 15.9,
+  "TRUTH_rmse": 29.02,
+  "TRUTH_cov": 0.984
+ },
+ "20261108-200629-9025 NCS+repair": {
+  "INPUT_well_mae": 6.8,
+  "INPUT_off_fault_jumps": 0.0866,
+  "INPUT_throw_mismatch": 0.333,
+  "TRUTH_mae": 14.82,
+  "TRUTH_rmse": 28.31,
+  "TRUTH_cov": 0.984
+ }
+}

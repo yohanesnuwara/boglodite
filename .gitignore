@@ -1,6 +1,5 @@
 tools/*
 data/*
-outputs/*
 models/*
 sandbox/MalenoV/__pycache__/*
 
@@ -24,3 +23,4 @@ runs/
 
 # Secrets
 .env
+outputs/f3_seismic

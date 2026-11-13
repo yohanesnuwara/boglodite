@@ -1,7 +1,7 @@
 """Command line: `strata ui` (workbench) and `strata run` (headless run).
 
     uv run --no-sync python -m strata.cli ui [--port 8270]
-    uv run --no-sync python -m strata.cli run [--model scripted|anthropic:claude-sonnet-5-5] [--no-score]
+    uv run --no-sync python -m strata.cli run [--model reference|anthropic:claude-opus-5-5]  (reference = fixed workflow, no LLM; alias: scripted) [--no-score]
 """
 
 from __future__ import annotations

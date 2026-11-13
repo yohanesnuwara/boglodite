@@ -1,0 +1,569 @@
+{
+  "norne_root": "/mnt/t7/Dell Inspiron/Local Disk D/Full-Norne",
+  "created": "2026-11-06 20:47:11",
+  "georef": {
+    "segy": {
+      "file": "norne4d_2001-full.sgy",
+      "ilines": [
+        970,
+        1290
+      ],
+      "xlines": [
+        1300,
+        2300
+      ],
+      "samples_ms": [
+        0.0,
+        4000.0,
+        4.0
+      ],
+      "affine_ilxl_to_xy": [
+        [
+          9.3185,
+          -8.3317
+        ],
+        [
+          8.3317,
+          9.3184
+        ],
+        [
+          433450.2287,
+          7315989.0832
+        ]
+      ],
+      "affine_rms_m": 0.45,
+      "affine_max_m": 0.894
+    },
+    "horizons": {
+      "Top_Not_2_2003_Time.txt": {
+        "n_points": 336579,
+        "z_range": [
+          1619.12,
+          3332.0
+        ],
+        "il_range": [
+          821.0,
+          1558.0
+        ],
+        "xl_range": [
+          1335.0,
+          3810.0
+        ],
+        "affine_rms_m": 0.004,
+        "horizon_ilxl_to_segy_ilxl": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            -0.0,
+            1.0
+          ],
+          [
+            -0.0062,
+            0.0009
+          ]
+        ],
+        "mapping_rms_lines": 0.0,
+        "fraction_inside_seismic": 0.0418
+      },
+      "Top_Aare_2003_Time.txt": {
+        "n_points": 148833,
+        "z_range": [
+          2325.72,
+          3420.0
+        ],
+        "il_range": [
+          755.0,
+          1269.0
+        ],
+        "xl_range": [
+          1406.0,
+          2179.0
+        ],
+        "affine_rms_m": 0.004,
+        "horizon_ilxl_to_segy_ilxl": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            -0.0,
+            1.0
+          ],
+          [
+            -0.0062,
+            0.0009
+          ]
+        ],
+        "mapping_rms_lines": 0.0,
+        "fraction_inside_seismic": 0.9893
+      },
+      "tral+lmig32r06_fxy+Not_2_Fm_Top+TIME_TDQ+2006+input_geomodel": {
+        "n_points": 246511,
+        "z_range": [
+          2141.29,
+          3077.22
+        ],
+        "il_range": [
+          899.0,
+          1331.0
+        ],
+        "xl_range": [
+          1285.0,
+          2292.0
+        ],
+        "affine_rms_m": 0.004,
+        "horizon_ilxl_to_segy_ilxl": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            -0.0,
+            1.0
+          ],
+          [
+            -0.0063,
+            0.0008
+          ]
+        ],
+        "mapping_rms_lines": 0.0,
+        "fraction_inside_seismic": 0.9024
+      },
+      "bosd-4D_OWC-2006_OFFICIAL_DEPTH": {
+        "n_points": 57205,
+        "z_range": [
+          2556.1,
+          2682.8
+        ],
+        "il_range": [
+          1003.0,
+          1182.0
+        ],
+        "xl_range": [
+          1423.0,
+          1948.0
+        ],
+        "affine_rms_m": 0.004,
+        "horizon_ilxl_to_segy_ilxl": [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            -0.0,
+            1.0
+          ],
+          [
+            -0.0063,
+            0.0009
+          ]
+        ],
+        "mapping_rms_lines": 0.0,
+        "fraction_inside_seismic": 1.0
+      }
+    },
+    "grid_inside_seismic": 0.7858,
+    "active_cells_inside_seismic": 0.9882,
+    "grid_seis_il_range": [
+      780.1,
+      1308.0
+    ],
+    "grid_seis_xl_range": [
+      1149.9,
+      2402.8
+    ]
+  },
+  "picks_vs_grid": [
+    {
+      "surface": "Garn top",
+      "marker": "FANGST GP. NO 2002 Top",
+      "n": 38,
+      "bias_m": -1.14,
+      "rms_m": 12.05,
+      "p50_abs_m": 3.21,
+      "p90_abs_m": 10.92,
+      "pick_vs_poslog_tvd_rms_m": 16.8
+    },
+    {
+      "surface": "Garn top",
+      "marker": "FANGST GP. NO 2006 Top",
+      "n": 48,
+      "bias_m": 9.34,
+      "rms_m": 23.44,
+      "p50_abs_m": 15.11,
+      "p90_abs_m": 28.44,
+      "pick_vs_poslog_tvd_rms_m": 29.07
+    },
+    {
+      "surface": "Garn top",
+      "marker": "Garn 3 NO 2002 Top",
+      "n": 35,
+      "bias_m": -1.98,
+      "rms_m": 14.21,
+      "p50_abs_m": 3.25,
+      "p90_abs_m": 9.48,
+      "pick_vs_poslog_tvd_rms_m": 30.76
+    },
+    {
+      "surface": "Garn top",
+      "marker": "Garn Fm. NO 2002 Top",
+      "n": 37,
+      "bias_m": 1.59,
+      "rms_m": 5.15,
+      "p50_abs_m": 3.16,
+      "p90_abs_m": 8.95,
+      "pick_vs_poslog_tvd_rms_m": 17.03
+    },
+    {
+      "surface": "Ile top",
+      "marker": "Ile Fm. NO 2002 Top",
+      "n": 37,
+      "bias_m": 1.12,
+      "rms_m": 5.58,
+      "p50_abs_m": 2.84,
+      "p90_abs_m": 9.69,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    },
+    {
+      "surface": "Ile top",
+      "marker": "Ile Fm. NO 2006 Top",
+      "n": 44,
+      "bias_m": -0.3,
+      "rms_m": 6.48,
+      "p50_abs_m": 3.36,
+      "p90_abs_m": 11.48,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    },
+    {
+      "surface": "Not top",
+      "marker": "Not Fm. NO 2002 Top",
+      "n": 37,
+      "bias_m": 1.51,
+      "rms_m": 6.06,
+      "p50_abs_m": 2.78,
+      "p90_abs_m": 10.21,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    },
+    {
+      "surface": "Not top",
+      "marker": "Not Fm. NO 2006 Top",
+      "n": 47,
+      "bias_m": 40.81,
+      "rms_m": 46.05,
+      "p50_abs_m": 46.22,
+      "p90_abs_m": 57.32,
+      "pick_vs_poslog_tvd_rms_m": 29.38
+    },
+    {
+      "surface": "Tilje base",
+      "marker": "Tilje Fm. NO 2002 Base",
+      "n": 16,
+      "bias_m": 1.28,
+      "rms_m": 6.66,
+      "p50_abs_m": 2.72,
+      "p90_abs_m": 8.12,
+      "pick_vs_poslog_tvd_rms_m": 2.4
+    },
+    {
+      "surface": "Tilje base",
+      "marker": "Tilje Fm. NO 2006 Base",
+      "n": 17,
+      "bias_m": 5.05,
+      "rms_m": 15.09,
+      "p50_abs_m": 3.0,
+      "p90_abs_m": 15.32,
+      "pick_vs_poslog_tvd_rms_m": 3.56
+    },
+    {
+      "surface": "Tilje top",
+      "marker": "Tilje Fm. NO 2002 Top",
+      "n": 16,
+      "bias_m": 2.13,
+      "rms_m": 4.94,
+      "p50_abs_m": 1.89,
+      "p90_abs_m": 8.82,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    },
+    {
+      "surface": "Tilje top",
+      "marker": "Tilje Fm. NO 2006 Top",
+      "n": 17,
+      "bias_m": 2.59,
+      "rms_m": 5.36,
+      "p50_abs_m": 1.92,
+      "p90_abs_m": 10.48,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    },
+    {
+      "surface": "Tofte top",
+      "marker": "Tofte Fm. NO 2002 Top",
+      "n": 21,
+      "bias_m": 2.1,
+      "rms_m": 5.71,
+      "p50_abs_m": 1.34,
+      "p90_abs_m": 10.91,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    },
+    {
+      "surface": "Tofte top",
+      "marker": "Tofte Fm. NO 2006 Top",
+      "n": 25,
+      "bias_m": 0.93,
+      "rms_m": 6.67,
+      "p50_abs_m": 2.52,
+      "p90_abs_m": 11.09,
+      "pick_vs_poslog_tvd_rms_m": 0.0
+    }
+  ],
+  "horizon_not2": {
+    "domain": "TWT ms (verified)",
+    "matched_nodes": 17132,
+    "diff_2006_minus_2003_ms": {
+      "mean": 16.39,
+      "std": 53.59,
+      "median_abs": 11.13,
+      "p90_abs": 93.45
+    }
+  },
+  "faults_vs_grid": {
+    "grid_fault_faces_I": 11520,
+    "grid_fault_faces_J": 2922,
+    "keyword_faults": 61,
+    "keyword_fault_faces": 19866,
+    "keyword_faces_on_zcorn_discontinuity_frac@1m": 0.744,
+    "stick_points_in_reservoir": 32447,
+    "stick_faults_in_reservoir": 62,
+    "stick_to_gridface_dist_m": {
+      "p50": 65.4,
+      "p75": 122.9,
+      "p90": 203.6,
+      "p95": 257.0
+    },
+    "gridface_to_stick_dist_m": {
+      "p50": 47.7,
+      "p75": 97.5,
+      "p90": 305.4,
+      "p95": 463.1
+    },
+    "gridfaces_within_100m_of_stick_frac": 0.755,
+    "stickpoints_within_100m_of_gridface_frac": 0.679
+  },
+  "volumetrics_atw": {
+    "equil": [
+      {
+        "eqlnum": 1,
+        "datum": 2582.0,
+        "p_datum_bar": 268.56,
+        "woc": 2692.0,
+        "goc": 2582.0
+      },
+      {
+        "eqlnum": 2,
+        "datum": 2500.0,
+        "p_datum_bar": 263.41,
+        "woc": 2585.5,
+        "goc": 2500.0
+      },
+      {
+        "eqlnum": 3,
+        "datum": 2582.0,
+        "p_datum_bar": 269.46,
+        "woc": 2618.0,
+        "goc": 2582.0
+      },
+      {
+        "eqlnum": 4,
+        "datum": 2200.0,
+        "p_datum_bar": 236.92,
+        "woc": 2400.0,
+        "goc": 2200.0
+      },
+      {
+        "eqlnum": 5,
+        "datum": 2585.0,
+        "p_datum_bar": 268.77,
+        "woc": 2693.3,
+        "goc": 2585.0
+      }
+    ],
+    "bo_by_eqlnum": {
+      "1": 1.3447,
+      "2": 1.3379,
+      "3": 1.3459,
+      "4": 1.3044,
+      "5": 1.345
+    },
+    "active_cells": 44927,
+    "swatinit_zero_in_oilzone_frac": 0.004,
+    "totals_1e6_m3": {
+      "brv": 3382.69,
+      "nrv": 2730.993,
+      "pv": 674.596,
+      "hcpv_oil": 210.092,
+      "hcpv_gas": 46.293,
+      "stoiip": 156.233
+    }
+  },
+  "blind_wells": {
+    "seed": 42,
+    "fraction": 0.2,
+    "unit": "well family (parent + sidetracks share upper path)",
+    "families_by_eqlnum": {
+      "1": [
+        "6608/10-B-1",
+        "6608/10-B-2",
+        "6608/10-B-3",
+        "6608/10-B-4",
+        "6608/10-C-1",
+        "6608/10-C-2",
+        "6608/10-C-3",
+        "6608/10-C-4",
+        "6608/10-D-1",
+        "6608/10-D-2",
+        "6608/10-D-3",
+        "6608/10-D-4",
+        "6608/10-E-1",
+        "6608/10-F-2",
+        "6608/10-K-1",
+        "6608/10-K-3"
+      ],
+      "2": [
+        "6608/10-E-4",
+        "6608/10-F-4"
+      ],
+      "3": [
+        "6608/10-E-2",
+        "6608/10-E-3",
+        "6608/10-F-1",
+        "6608/10-F-3"
+      ]
+    },
+    "blind_families": [
+      "6608/10-B-2",
+      "6608/10-D-3",
+      "6608/10-D-4",
+      "6608/10-F-3"
+    ],
+    "blind_wells": [
+      "6608/10-B-2H",
+      "6608/10-D-3AH",
+      "6608/10-D-3BY1HT2",
+      "6608/10-D-3BY2H",
+      "6608/10-D-3H",
+      "6608/10-D-4AH",
+      "6608/10-D-4H",
+      "6608/10-F-3H"
+    ]
+  },
+  "ensemble": {
+    "n": 120,
+    "geometry_identical_to_atw": true,
+    "zcorn_maxdiff_m_max": 0.005,
+    "coord_xy_maxdiff_m_max": 0.005,
+    "active_p10_p50_p90": [
+      104970.0,
+      104970.0,
+      104970.0
+    ],
+    "actnum_agree_atw_mean": 0.4703,
+    "atw_brv_by_zone_1e6": {
+      "brv_Garn": 520.76,
+      "brv_Not": 0.0,
+      "brv_Ile": 618.45,
+      "brv_Tofte": 901.18,
+      "brv_Tilje": 1342.3
+    },
+    "brv_envelope_own_actnum_1e6": {
+      "brv_Garn": [
+        1798.69,
+        1798.69,
+        1798.69
+      ],
+      "brv_Not": [
+        377.42,
+        377.42,
+        377.42
+      ],
+      "brv_Ile": [
+        1838.61,
+        1838.61,
+        1838.61
+      ],
+      "brv_Tofte": [
+        2999.97,
+        2999.97,
+        2999.97
+      ],
+      "brv_Tilje": [
+        3817.54,
+        3817.54,
+        3817.54
+      ]
+    },
+    "atw_active_subset_frac_min": 0.9998,
+    "facies_envelope_on_atw_active": {
+      "facies0_Garn": [
+        0.4884,
+        0.5396,
+        0.5396
+      ],
+      "facies1_Garn": [
+        0.284,
+        0.284,
+        0.2982
+      ],
+      "facies3_Garn": [
+        0.1764,
+        0.1764,
+        0.2146
+      ],
+      "facies0_Ile": [
+        0.5075,
+        0.5429,
+        0.5429
+      ],
+      "facies1_Ile": [
+        0.2761,
+        0.2822,
+        0.2822
+      ],
+      "facies3_Ile": [
+        0.1749,
+        0.1749,
+        0.2164
+      ],
+      "facies0_Tofte": [
+        0.5058,
+        0.5393,
+        0.5393
+      ],
+      "facies1_Tofte": [
+        0.2684,
+        0.2884,
+        0.2884
+      ],
+      "facies3_Tofte": [
+        0.1723,
+        0.1723,
+        0.2167
+      ],
+      "facies0_Tilje": [
+        0.4252,
+        0.5444,
+        0.5444
+      ],
+      "facies1_Tilje": [
+        0.2944,
+        0.2944,
+        0.3028
+      ],
+      "facies3_Tilje": [
+        0.1612,
+        0.1612,
+        0.2594
+      ]
+    }
+  }
+}

@@ -79,13 +79,14 @@ def skill(name: str) -> str:
 
 # ── models ───────────────────────────────────────────────────────────────────
 def make_model(spec: str, scripted_plan: Callable | None = None):
-    """'scripted' → deterministic FunctionModel following the agent's plan (no LLM);
+    """'reference' (alias 'scripted') → the REFERENCE WORKFLOW: a deterministic FunctionModel following the
+    agent's fixed plan (no LLM; researcher-derived, see skills/geomodel-horizon-playbook);
     'openai:<model>@<base_url>' → OpenAI-compatible server (e.g. LM Studio);
     anything else → a Pydantic AI model string such as 'anthropic:claude-sonnet-5-5'."""
-    if spec == "scripted":
+    if spec in ("reference", "scripted"):
         if scripted_plan is None:
-            raise ValueError("scripted model needs a plan")
-        return FunctionModel(scripted_plan, model_name="scripted")
+            raise ValueError("the reference workflow needs a plan")
+        return FunctionModel(scripted_plan, model_name="reference")
     if spec.startswith("openai:") and "@" in spec:
         from pydantic_ai.models.openai import OpenAIChatModel
         from pydantic_ai.providers.openai import OpenAIProvider
@@ -96,7 +97,7 @@ def make_model(spec: str, scripted_plan: Callable | None = None):
 
 def plan(steps: list[tuple[str, Callable[[list], dict] | dict]], final: Callable[[list], dict] | dict):
     """Build a FunctionModel plan: call `steps` in order (args may depend on earlier tool
-    returns), then return the output. Used for the deterministic 'scripted' baseline."""
+    returns), then return the output. Used for the deterministic reference workflow."""
     def fn(messages: list[M.ModelMessage], info: AgentInfo) -> M.ModelResponse:
         returns = [p for m in messages for p in getattr(m, "parts", []) if isinstance(p, M.ToolReturnPart)]
         k = len(returns)

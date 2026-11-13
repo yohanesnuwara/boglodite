@@ -1,0 +1,32 @@
+[
+ {
+  "case": "relax \u00b135",
+  "secs": 21.3,
+  "coverage": 1.0,
+  "well_mae": 6.03,
+  "off_fault_jumps": 0.0706,
+  "throw_mismatch": 0.397,
+  "throw_mismatch_where_throw": 0.621,
+  "reliable": 843
+ },
+ {
+  "case": "skip+throw \u00b135",
+  "secs": 25.4,
+  "coverage": 0.97,
+  "well_mae": 6.11,
+  "off_fault_jumps": 0.0736,
+  "throw_mismatch": 0.312,
+  "throw_mismatch_where_throw": 0.45,
+  "reliable": 871
+ },
+ {
+  "case": "skip+throw \u00b125",
+  "secs": 23.1,
+  "coverage": 0.967,
+  "well_mae": 6.71,
+  "off_fault_jumps": 0.0692,
+  "throw_mismatch": 0.326,
+  "throw_mismatch_where_throw": 0.453,
+  "reliable": 858
+ }
+]

@@ -1,0 +1,30 @@
+{
+ "DP from one seed": {
+  "scorer_mae": 39.54,
+  "coverage": 0.985,
+  "map_mae": 39.5,
+  "within15": 0.672,
+  "picked_of_ref": 1.0
+ },
+ "Agent \u00b7 confident": {
+  "scorer_mae": 36.67,
+  "coverage": 0.926,
+  "map_mae": 35.0,
+  "within15": 0.735,
+  "picked_of_ref": 0.799
+ },
+ "Agent \u00b7 flagged for review": {
+  "scorer_mae": NaN,
+  "coverage": 0.332,
+  "map_mae": 29.9,
+  "within15": 0.757,
+  "picked_of_ref": 0.118
+ },
+ "Agent \u00b7 all picks": {
+  "scorer_mae": 37.07,
+  "coverage": 0.983,
+  "map_mae": 34.3,
+  "within15": 0.738,
+  "picked_of_ref": 0.917
+ }
+}

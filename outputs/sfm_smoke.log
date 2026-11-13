@@ -1,0 +1,22 @@
+/home/yohanuwa/projects/boglodite/tools/seismicfoundationmodel/SFM-Finetune/util/misc.py:255: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  self._scaler = torch.cuda.amp.GradScaler()
+/home/yohanuwa/projects/boglodite/tools/seismicfoundationmodel/SFM-Finetune/engine_finetune.py:57: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast():
+/home/yohanuwa/projects/boglodite/tools/seismicfoundationmodel/SFM-Finetune/engine_finetune.py:194: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast():
+Device: NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU | cap (12, 0)
+Model built: vit_base_patch16, 88.4M params
+Running 1 training epoch on GPU ...
+Epoch: [0]  [0/4]  eta: 0:00:06  lr: 0.000100  loss: 0.9307 (0.9307)  time: 1.7058  data: 0.0269  max mem: 702
+Epoch: [0]  [3/4]  eta: 0:00:00  lr: 0.000015  loss: 0.9307 (0.9326)  time: 0.5323  data: 0.0177  max mem: 1713
+Epoch: [0] Total time: 0:00:02 (0.5337 s / it)
+Averaged stats: lr: 0.000015  loss: 0.9307 (0.9326)
+train stats: {'lr': 6.2875e-05, 'loss': 0.9325703531503677}
+Running regression eval ...
+Test:  [0/4]  eta: 0:00:00  loss: 0.1023 (0.1023)  mse: 0.1023 (0.1023)  msssim: 0.3152 (0.3152)  psnr: 15.2198 (15.2198)  time: 0.0846  data: 0.0147  max mem: 1713
+Test:  [3/4]  eta: 0:00:00  loss: 0.1016 (0.1019)  mse: 0.1016 (0.1019)  msssim: 0.3154 (0.3446)  psnr: 15.1778 (15.1899)  time: 0.0477  data: 0.0147  max mem: 1713
+Test: Total time: 0:00:00 (0.0480 s / it)
+* MSE 0.102 MSSSIM 0.345 PSNR 15.190
+eval stats: {'loss': 0.10194168612360954, 'mse': 0.10194168612360954, 'msssim': 0.3446399122476578, 'psnr': 15.189929008483887}
+
+SMOKE TEST PASSED: denoise fine-tuning code path runs end-to-end on GPU.

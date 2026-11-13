@@ -1,0 +1,37 @@
+[
+ {
+  "case": "peak, no shift (old)",
+  "time_mae": 34.0,
+  "coverage": 0.985,
+  "rmse": 45.3,
+  "bias": 9.3
+ },
+ {
+  "case": "trough, shift -11.5",
+  "time_mae": 35.9,
+  "coverage": 0.985,
+  "rmse": 52.3,
+  "bias": 22.9
+ },
+ {
+  "case": "trough, shift -11.5, barrier p95",
+  "time_mae": 32.6,
+  "coverage": 0.984,
+  "rmse": 46.4,
+  "bias": 19.5
+ },
+ {
+  "case": "trough, shift -11.5, barrier p92",
+  "time_mae": 48.5,
+  "coverage": 0.983,
+  "rmse": 75.9,
+  "bias": 46.3
+ },
+ {
+  "case": "trough, shift -11.5, barrier p92, corr .85",
+  "time_mae": 48.4,
+  "coverage": 0.98,
+  "rmse": 68.3,
+  "bias": 41.8
+ }
+]

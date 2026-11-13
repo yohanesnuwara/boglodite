@@ -54,7 +54,7 @@ def index():
 def config():
     return {"default_model": DEFAULT_MODEL, "data_available": data_available(),
             "anthropic_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
-            "models": ["anthropic:claude-opus-5-5", "anthropic:claude-sonnet-5-5", "anthropic:claude-haiku-5-5", "scripted"],
+            "models": ["anthropic:claude-opus-5-5", "anthropic:claude-sonnet-5-5", "anthropic:claude-haiku-5-5", "reference"],
             "autonomy": ["autonomous", "gates_only", "every_decision"],
             "default_brief": RunConfig().brief}
 

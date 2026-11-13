@@ -1,0 +1,52 @@
+[
+ {
+  "case": "3 seeds default",
+  "secs": 15.1,
+  "coverage": 0.9866,
+  "jumps": 20788,
+  "conf_med": 0.983,
+  "well_mae": 71.09,
+  "well_max": 324.74,
+  "unpicked": 1
+ },
+ {
+  "case": "all seeds default",
+  "secs": 13.5,
+  "coverage": 0.9856,
+  "jumps": 22716,
+  "conf_med": 0.981,
+  "well_mae": 38.8,
+  "well_max": 214.0,
+  "unpicked": 0
+ },
+ {
+  "case": "all seeds corr0.85 step6",
+  "secs": 16.5,
+  "coverage": 0.9676,
+  "jumps": 19725,
+  "conf_med": 0.984,
+  "well_mae": 34.48,
+  "well_max": 177.64,
+  "unpicked": 0
+ },
+ {
+  "case": "all seeds corr0.9 step4",
+  "secs": 12.1,
+  "coverage": 0.8816,
+  "jumps": 9905,
+  "conf_med": 0.986,
+  "well_mae": 19.3,
+  "well_max": 138.14,
+  "unpicked": 0
+ },
+ {
+  "case": "all seeds peak",
+  "secs": 15.7,
+  "coverage": 0.9856,
+  "jumps": 20661,
+  "conf_med": 0.983,
+  "well_mae": 10.17,
+  "well_max": 33.0,
+  "unpicked": 0
+ }
+]

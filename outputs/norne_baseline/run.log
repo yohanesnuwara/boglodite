@@ -1,0 +1,22 @@
+[20:43:49] loading ATW 2013 reference grid + properties
+[20:43:51] 1/7 georeferencing
+[20:43:56] 2/7 grid vs well picks
+[20:43:58] 3/7 Not 2 horizon: 2006 geomodel input vs 2003 interpretation
+[20:44:01] 4/7 grid vs fault sticks
+[20:44:03] 5/7 reference volumetrics
+[20:44:05] 6/7 blind-well selection
+[20:44:05] QC figure
+[20:44:07] 7/7 ensemble of 120 realizations (reads ~1.7 GB from the drive)
+[20:44:09]   ensemble 10/120
+[20:44:10]   ensemble 20/120
+[20:44:11]   ensemble 30/120
+[20:44:12]   ensemble 40/120
+[20:44:13]   ensemble 50/120
+[20:44:14]   ensemble 60/120
+[20:44:15]   ensemble 70/120
+[20:44:17]   ensemble 80/120
+[20:44:17]   ensemble 90/120
+[20:44:19]   ensemble 100/120
+[20:44:20]   ensemble 110/120
+[20:44:21]   ensemble 120/120
+[20:44:21] done → /home/yohanuwa/projects/boglodite/outputs/norne_baseline

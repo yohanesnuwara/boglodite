@@ -1,0 +1,21 @@
+/tmp/claude-1000/-home-yohanuwa-projects-boglodite/823d9d56-e0cc-4e3d-8a6d-2f557d0c6cf5/scratchpad/agentwork/strata-agent-work/03_h01_horizon_agent/src/hz2d.py:224: RuntimeWarning: Mean of empty slice
+  return float(np.nanmean(c.amp[m]) * 0.5 + np.nanmean(c.ncc_nb[m]) + np.nanmean(c.ncc_seed[m])
+  0/321 inlines, 1 s
+  20/321 inlines, 8 s
+  40/321 inlines, 13 s
+  60/321 inlines, 19 s
+  80/321 inlines, 25 s
+  100/321 inlines, 31 s
+  120/321 inlines, 38 s
+  140/321 inlines, 43 s
+  160/321 inlines, 49 s
+  180/321 inlines, 56 s
+  200/321 inlines, 61 s
+  220/321 inlines, 67 s
+  240/321 inlines, 73 s
+  260/321 inlines, 77 s
+  inline 1121: TimeoutError after 28 s
+  280/321 inlines, 112 s
+  300/321 inlines, 119 s
+  320/321 inlines, 127 s
+variant B done in 128 s; well-seeded inlines 88

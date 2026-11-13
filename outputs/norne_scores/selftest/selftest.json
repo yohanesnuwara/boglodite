@@ -1,0 +1,109 @@
+{
+  "checks": [
+    {
+      "name": "reference S2 perfect",
+      "ok": true,
+      "detail": "1.0000"
+    },
+    {
+      "name": "reference S3 perfect",
+      "ok": true,
+      "detail": "1.0000"
+    },
+    {
+      "name": "reference S5 perfect",
+      "ok": true,
+      "detail": "1.0000"
+    },
+    {
+      "name": "reference S6 perfect",
+      "ok": true,
+      "detail": "1.0000"
+    },
+    {
+      "name": "reference S7 perfect",
+      "ok": true,
+      "detail": "1.0000"
+    },
+    {
+      "name": "reference S4 = truth-vs-truth ceiling (blind picks 3\u201310 m)",
+      "ok": true,
+      "detail": "6.59 m"
+    },
+    {
+      "name": "shift: zone-top RMS \u2248 10 m",
+      "ok": true,
+      "detail": "10.00"
+    },
+    {
+      "name": "shift: STOIIP \u22124\u2026\u22128 % (\u2248 \u22120.6 %/m, spec \u00a710.5)",
+      "ok": true,
+      "detail": "-5.95 %"
+    },
+    {
+      "name": "shift: BRV unchanged",
+      "ok": true,
+      "detail": "+0.00000"
+    },
+    {
+      "name": "y-negated: S5 silent_failure",
+      "ok": true,
+      "detail": "silent_failure"
+    },
+    {
+      "name": "y-negated: S7 not correct",
+      "ok": true,
+      "detail": "silent_failure"
+    },
+    {
+      "name": "J-reversed ordering scores like reference",
+      "ok": true,
+      "detail": "S4:0.5175 S5:1.0000 S6:1.0000 S7:1.0000"
+    },
+    {
+      "name": "poro \u221210 %: STOIIP \u2248 \u221210 %",
+      "ok": true,
+      "detail": "-10.00 %"
+    },
+    {
+      "name": "poro \u221210 %: S6 poro distance > 0",
+      "ok": true,
+      "detail": "0.0241"
+    },
+    {
+      "name": "poro \u221210 %: geometry untouched",
+      "ok": true,
+      "detail": "1.0000"
+    },
+    {
+      "name": "drop faults: recall drops, precision stays",
+      "ok": true,
+      "detail": "recall 0.611, precision 1.000"
+    },
+    {
+      "name": "2003 horizon: median |\u0394T| 5\u201320 ms on covered nodes",
+      "ok": true,
+      "detail": "10.66 ms"
+    },
+    {
+      "name": "2003 horizon: covers < 10 % of reservoir \u21d2 silent_failure (file is partial, spec \u00a711)",
+      "ok": true,
+      "detail": "coverage 0.049, silent_failure"
+    },
+    {
+      "name": "bad files: overt failures",
+      "ok": true,
+      "detail": "S2:overt_failure S4:overt_failure S5:overt_failure S6:overt_failure S7:overt_failure"
+    }
+  ],
+  "composites": {
+    "reference": 0.9276,
+    "shift_10m_deeper": 0.6569,
+    "y_negated": 0.4815,
+    "j_reversed_order": 0.9276,
+    "poro_minus_10pct": 0.6765,
+    "drop_10_faults": 0.8816,
+    "horizon_2003_interp": 0.8287,
+    "overt_bad_files": 0.0
+  }
+}

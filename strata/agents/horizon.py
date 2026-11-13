@@ -54,6 +54,11 @@ Tools (you choose which to use, in which order, and how often):
   level it can sit one cycle off, parallel to the right event; it does not create fault throws by itself.
   It can also serve as a better base than track_horizon, followed by the level check or repair.
 - fill_and_smooth: fill small gaps (do not fill large areas).
+- holdout_wells_check: ACCURACY from unseen wells — replays a candidate's chain of steps with groups of
+  wells hidden and reports the hidden-well error after every step, next to plain interpolation. Slow
+  (minutes); use it to decide between serious candidates, not after every step.
+- method_agreement_check: share of the horizon backed by ≥ 2 independent methods (tracking, dip-following
+  + NCS, NCS boundary) and the largest regions where they disagree — where to look harder.
 - compare_candidates: every step above keeps the previous horizon as a named candidate. This scores all
   candidates with input-only checks: well residual, off-fault jumps, throw mismatch at reliable fault
   crossings, mean event amplitude, coverage, the fraction that disagrees with the NCS level, and DIP
@@ -62,7 +67,9 @@ Tools (you choose which to use, in which order, and how often):
   select_candidate makes one of them the working horizon again.
 - publish_horizon with a short honest summary of what you did and why, then return your result.
 
-How to choose: there is no single best recipe. Base pick first, then use the repair and the level check
+How to choose: follow the playbook below — start from the reference workflow, diagnose where the horizon
+is suspicious, use the tool aimed at that cause, and judge with hold-out wells and method agreement.
+There is no single best recipe. Base pick first, then use the repair and the level check
 where your diagnostics show the problem they address, and compare candidates before publishing. No check
 is perfect: the fault-based checks rely on the fault map, which misses some large faults, so a real step
 down at such a fault can look like an "off-fault jump"; the well residual only sees well locations;
@@ -72,15 +79,22 @@ you have a specific reason. You never see the benchmark reference; do not ask fo
 Parameter meaning (greedy): search_ms (how far to look for the next extremum), window_ms (waveform length
 compared), min_corr (0–1 acceptance threshold), max_step_ms (largest allowed change between traces).
 
+Playbook (how to choose and judge):
+""" + skill("geomodel-horizon-playbook") + """
+
 Domain guidance:
 """ + skill("geomodel-seismic-interpretation")
 
 
-def _set_working(ctx: RunContext_, hz, label: str) -> str:
-    """Make hz the working horizon and keep it as a named candidate."""
+def _set_working(ctx: RunContext_, hz, label: str, step: tuple[str, dict] | None = None, starter: bool = False) -> str:
+    """Make hz the working horizon and keep it as a named candidate, with the chain of workflow steps
+    that produced it (so the chain can be replayed with wells held out)."""
     cands = ctx.state.setdefault("candidates", {})
+    chains = ctx.state.setdefault("chains", {})
+    parent = [] if starter else list(chains.get(ctx.state.get("working_label"), []))
     key = f"{len(cands) + 1}_{label}"
     cands[key] = hz
+    chains[key] = parent + ([step] if step else [])
     ctx.state["working_horizon"] = hz
     ctx.state["working_label"] = key
     return key
@@ -88,6 +102,30 @@ def _set_working(ctx: RunContext_, hz, label: str) -> str:
 
 def _ties(ctx: RunContext_):
     return ctx.state["ties"][ctx.state["marker"]]
+
+
+def _wells(ctx: RunContext_, shift: float | None = None) -> list[tuple[str, float, float, float]]:
+    """Tied wells inside the cube as (name, il, xl, twt + bulk shift)."""
+    ties = _ties(ctx)
+    ties = ties[ties.in_cube & ties.twt.notna()]
+    s = ctx.state.get("working_params", {}).get("bulk_shift_ms", 0.0) if shift is None else shift
+    return [(r.well, r.il, r.xl, r.twt + s) for r in ties.itertuples()]
+
+
+def _tie_points(ctx: RunContext_):
+    ties = _ties(ctx)
+    ties = ties[ties.in_cube & ties.twt.notna()]
+    return [(a, b, t) for _, a, b, t in _wells(ctx)], ties
+
+
+def _env(ctx: RunContext_):
+    from strata.tools import workflow as WF
+    env = ctx.state.get("wf_env")
+    if env is None:
+        env = ctx.state["wf_env"] = WF.Env(ctx.cube)
+    env.polarity = ctx.state.get("working_params", {}).get("polarity", ctx.state.get("expected_event") or "trough")
+    env.fault = ctx.state.get("fault_mask")
+    return env
 
 
 async def seed_report(ctx: RunContext[RunContext_], search_ms: float = 16.0) -> dict:
@@ -113,28 +151,23 @@ async def track_horizon(ctx: RunContext[RunContext_], polarity: str, method: str
       stay unpicked.
     method='greedy': seeded region growing by trace-to-trace correlation (search_ms, window_ms, min_corr,
       max_step_ms), also restricted to ±guide_window_ms of the tied-top surface (0 = unguided)."""
-    ties = _ties(ctx.deps)
-    ties = ties[ties.in_cube & ties.twt.notna()]
+    from strata.tools import workflow as WF
+    wells = _wells(ctx.deps, bulk_shift_ms)
     if seed_wells:
-        ties = ties[ties.well.isin(seed_wells)]
-    if ties.empty:
+        wells = [w for w in wells if w[0] in seed_wells]
+    if not wells:
         return {"error": "no usable seed wells"}
-    seeds = [(r.il, r.xl, r.twt + bulk_shift_ms) for r in ties.itertuples()]
-    cube = ctx.deps.cube
-    guide = H.guide_surface(cube, seeds) if guide_window_ms > 0 else None
-    fmask = ctx.deps.state.get("fault_mask") if use_fault_map else None
-    if method == "viterbi":
-        hz, rep = H.viterbi_track(cube, guide if guide is not None else H.guide_surface(cube, seeds), polarity,
-                                  window_ms=guide_window_ms or 30.0, fault=fmask, anchors=seeds,
-                                  fault_mode="skip" if fmask is not None else "relax")
-    else:
-        hz, rep = H.track(cube, seeds, polarity, search_ms, window_ms, min_corr, max_step_ms,
-                          guide=guide, guide_window_ms=guide_window_ms)
-    rep["candidate"] = _set_working(ctx.deps, hz, f"track_{method}")
-    ctx.deps.state["working_params"] = {**rep["params"], "bulk_shift_ms": bulk_shift_ms,
-                                        "seed_wells": ties.well.tolist(), "method": method,
-                                        "fault_map_used": fmask is not None}
-    rep["seed_wells"] = ties.well.tolist()
+    ctx.deps.state["working_params"] = {**ctx.deps.state.get("working_params", {}), "polarity": polarity,
+                                        "bulk_shift_ms": bulk_shift_ms}
+    env = _env(ctx.deps)
+    params = {"method": method, "guide_window_ms": guide_window_ms, "use_fault_map": use_fault_map,
+              "search_ms": search_ms, "window_ms": window_ms, "min_corr": min_corr, "max_step_ms": max_step_ms}
+    hz, rep = WF.step_track(env, wells, **params)
+    rep["candidate"] = _set_working(ctx.deps, hz, f"track_{method}", ("track", params), starter=True)
+    ctx.deps.state["working_params"] = {**rep["params"], "bulk_shift_ms": bulk_shift_ms, "polarity": polarity,
+                                        "seed_wells": [w[0] for w in wells], "method": method,
+                                        "fault_map_used": use_fault_map and env.fault is not None}
+    rep["seed_wells"] = [w[0] for w in wells]
     return ctx.deps.record("track_horizon", ctx.deps.state["working_params"], rep)
 
 
@@ -144,54 +177,35 @@ async def repair_deviations(ctx: RunContext[RunContext_], window_ms: float = 35.
     last trusted pick the same event (same waveform, same amplitude) is re-tracked along inlines and along
     crosslines; where both directions agree within 8 ms the re-tracked times become SEEDS, which are
     added to the tied well points as anchors, and the whole horizon is re-solved with Viterbi (±window_ms
-    around the corrected surface). Compare the verifier numbers before/after; keep the better version."""
-    from strata.tools import repair as RP
+    around the corrected surface). Compare candidates before/after; keep the better version."""
+    from strata.tools import workflow as WF
     hz = ctx.deps.state.get("working_horizon")
     if hz is None:
         return {"error": "track first"}
-    wp = ctx.deps.state.get("working_params", {})
-    ties = _ties(ctx.deps)
-    ties = ties[ties.in_cube & ties.twt.notna()]
-    wells = [(r.il, r.xl, r.twt + wp.get("bulk_shift_ms", 0.0)) for r in ties.itertuples()]
-    new, rep = RP.retrack_with_seeds(ctx.deps.cube, hz, wells, wp.get("polarity", "trough"),
-                                     fault=ctx.deps.state.get("fault_mask"), window_ms=window_ms)
-    cand = _set_working(ctx.deps, new, "repair")
+    new, rep = WF.step_repair(_env(ctx.deps), _wells(ctx.deps), hz, window_ms=window_ms)
+    cand = _set_working(ctx.deps, new, "repair", ("repair", {"window_ms": window_ms}))
     ctx.deps.state["repair_seeds"] = rep.pop("seed_points")
-    ctx.deps.state["working_params"] = {**wp, "deviation_repair": True, "repair_window_ms": window_ms}
     out = {"deviation_repair": rep["deviation_repair"], "coverage": rep.get("coverage"),
            "jumps_frac": rep.get("jumps_frac"), "seeds_used": len(ctx.deps.state["repair_seeds"]), "candidate": cand}
     return ctx.deps.record("repair_deviations", {"window_ms": window_ms}, out)
 
 
-def _tie_points(ctx: RunContext_) -> list[tuple[float, float, float]]:
-    ties = _ties(ctx)
-    ties = ties[ties.in_cube & ties.twt.notna()]
-    shift = ctx.state.get("working_params", {}).get("bulk_shift_ms", 0.0)
-    return [(r.il, r.xl, r.twt + shift) for r in ties.itertuples()], ties
-
-
-def _ncs_model(ctx: RunContext_) -> dict:
-    """NCS features (cached on disk), probe trained on this run's tied tops, LOO stats — cached in state."""
-    if "ncs" in ctx.state:
-        return ctx.state["ncs"]
-    import pandas as pd
-    from strata.tools import foundation as FM
-    cube = ctx.cube
-    feats, co = FM.extract_features(cube)
-    pts, ties = _tie_points(ctx)
-    wells = [(w, a, b, t) for w, (a, b, t) in zip(ties.well, pts)]
-    guide = H.guide_surface(cube, pts)
-    P, B, surface, info = FM.probability_and_surface(feats, co, cube, wells, guide)
-    loo = pd.DataFrame(FM.leave_one_well_out(feats, co, cube, wells))
-    stats = {"wells": len(wells), "ncs_mae_ms": round(float(loo.fm_err_ms.abs().mean()), 1),
-             "ncs_median_ms": round(float(loo.fm_err_ms.abs().median()), 1),
-             "interpolation_mae_ms": round(float(loo.interp_err_ms.abs().mean()), 1),
-             "interpolation_median_ms": round(float(loo.interp_err_ms.abs().median()), 1),
-             "ncs_80th_pct_ms": round(float(loo.fm_err_ms.abs().quantile(0.8)), 1),
-             "wells_where_ncs_better": loo.loc[loo.fm_err_ms.abs() < loo.interp_err_ms.abs() - 5, "well"].tolist()}
-    ctx.state["ncs"] = {"surface": surface, "contrast": info["contrast_grid"], "coords": co, "loo": stats,
-                        "train_accuracy": info["train_accuracy"], "median_contrast": info["median_contrast"]}
-    return ctx.state["ncs"]
+def _ncs_loo(ctx: RunContext_) -> dict:
+    """Leave-one-well-out accuracy of the NCS boundary vs interpolation (cached in state)."""
+    if "ncs_loo" not in ctx.state:
+        import pandas as pd
+        from strata.tools import foundation as FM
+        env = _env(ctx)
+        feats, co = env.feats()
+        loo = pd.DataFrame(FM.leave_one_well_out(feats, co, ctx.cube, _wells(ctx)))
+        ctx.state["ncs_loo"] = {
+            "wells": len(loo), "ncs_mae_ms": round(float(loo.fm_err_ms.abs().mean()), 1),
+            "ncs_median_ms": round(float(loo.fm_err_ms.abs().median()), 1),
+            "interpolation_mae_ms": round(float(loo.interp_err_ms.abs().mean()), 1),
+            "interpolation_median_ms": round(float(loo.interp_err_ms.abs().median()), 1),
+            "ncs_80th_pct_ms": round(float(loo.fm_err_ms.abs().quantile(0.8)), 1),
+            "wells_where_ncs_better": loo.loc[loo.fm_err_ms.abs() < loo.interp_err_ms.abs() - 5, "well"].tolist()}
+    return ctx.state["ncs_loo"]
 
 
 async def ncs_level_check(ctx: RunContext[RunContext_], disagree_ms: float = 40.0, min_contrast: float = 0.5,
@@ -201,25 +215,23 @@ async def ncs_level_check(ctx: RunContext[RunContext_], disagree_ms: float = 40.
     Viterbi (boundary as guide, ±window_ms, wells as anchors) only where the horizon and the boundary
     differ by > disagree_ms and the boundary contrast ≥ min_contrast. Reports leave-one-well-out accuracy
     of the boundary vs interpolation between wells, the flagged fraction and the mean shift."""
-    from strata.tools import foundation as FM
+    from strata.tools import workflow as WF
     hz = ctx.deps.state.get("working_horizon")
     if hz is None:
         return {"error": "track first"}
+    params = {"disagree_ms": disagree_ms, "min_contrast": min_contrast, "window_ms": window_ms}
     try:
-        m = _ncs_model(ctx.deps)
+        env = _env(ctx.deps)
+        new, info = WF.step_ncs(env, _wells(ctx.deps), hz, **params)
+        m = WF.ncs_level(env, _wells(ctx.deps))
+        loo = _ncs_loo(ctx.deps)
     except Exception as e:                                    # no GPU / no NCS package and no cache
         return {"error": f"NCS model unavailable: {type(e).__name__}: {e}"}
-    pts, _ = _tie_points(ctx.deps)
-    pol = ctx.deps.state.get("working_params", {}).get("polarity", "trough")
-    new, info, flag = FM.level_check_retrack(ctx.deps.cube, hz, m["surface"], m["contrast"], m["coords"], pts,
-                                             fault=ctx.deps.state.get("fault_mask"), polarity=pol,
-                                             disagree_ms=disagree_ms, min_contrast=min_contrast, window_ms=window_ms)
-    info["candidate"] = _set_working(ctx.deps, new, "ncs")
-    ctx.deps.state["ncs_flag"] = flag
-    out = {**info, "leave_one_well_out": m["loo"], "probe_train_accuracy": m["train_accuracy"],
+    ctx.deps.state["ncs_flag"] = info.pop("_flag")
+    info["candidate"] = _set_working(ctx.deps, new, "ncs", ("ncs", params))
+    out = {**info, "leave_one_well_out": loo, "probe_train_accuracy": m["train_accuracy"],
            "median_boundary_contrast": m["median_contrast"]}
-    return ctx.deps.record("ncs_level_check", {"disagree_ms": disagree_ms, "min_contrast": min_contrast,
-                                               "window_ms": window_ms}, out)
+    return ctx.deps.record("ncs_level_check", params, out)
 
 
 async def dip_guided_horizon(ctx: RunContext[RunContext_], polarity: str = "trough", use_ncs_level: bool = True,
@@ -232,75 +244,104 @@ async def dip_guided_horizon(ctx: RunContext[RunContext_], polarity: str = "trou
     itself is kept. Follows the structure away from wells instead of cutting across dipping reflectors,
     so it removes sawtooth/cycle-hopping picks; it can sit one cycle off where no well or confident NCS
     level pins it, and it never creates a fault throw by itself."""
-    from strata.tools import dip as DP
-    cube = ctx.deps.cube
-    pts, _ = _tie_points(ctx.deps)
-    fm = ctx.deps.state.get("fault_mask")
-    level = lw = None
-    if use_ncs_level:
-        try:
-            m = _ncs_model(ctx.deps)
-            co = m["coords"]
-            ia = np.clip(np.searchsorted(co["il_sample"], np.arange(cube.shape[0])), 0, len(co["il_sample"]) - 1)
-            ja = np.clip(np.searchsorted(co["xl_sample"], np.arange(cube.shape[1])), 0, len(co["xl_sample"]) - 1)
-            level, lw = m["surface"], np.clip((m["contrast"][np.ix_(ia, ja)] - 0.5) / 0.5, 0, 1)
-        except Exception as e:
-            return {"error": f"NCS level unavailable ({type(e).__name__}); call with use_ncs_level=false"}
-    surf, info = DP.lsq_horizon(cube, H.guide_surface(cube, pts), pts, fault=fm, level=level, level_weight=lw)
-    snap, rep = H.viterbi_track(cube, surf, polarity, window_ms=snap_window_ms, fault=fm, anchors=pts,
-                                fault_mode="skip" if fm is not None else "relax", second_window_ms=min(8.0, snap_window_ms))
-    hz = H.Horizon(np.where(np.isfinite(snap.twt), snap.twt, surf).astype(np.float32),
-                   np.where(np.isfinite(snap.twt), snap.conf, 0.5).astype(np.float32))
-    info["snapped_frac_of_cube"] = round(float(np.isfinite(snap.twt).mean()), 3)
-    info["dip_conformity"] = DP.dip_conformity(cube, hz.twt, fm)
-    info["candidate"] = _set_working(ctx.deps, hz, "dip")
-    ctx.deps.state.setdefault("working_params", {}).update({"polarity": polarity, "method": "dip_lsq"})
-    return ctx.deps.record("dip_guided_horizon", {"polarity": polarity, "use_ncs_level": use_ncs_level,
-                                                  "snap_window_ms": snap_window_ms}, info)
+    from strata.tools import workflow as WF
+    ctx.deps.state["working_params"] = {**ctx.deps.state.get("working_params", {}), "polarity": polarity}
+    params = {"use_ncs_level": use_ncs_level, "snap_window_ms": snap_window_ms}
+    try:
+        hz, info = WF.step_dip(_env(ctx.deps), _wells(ctx.deps), **params)
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e} (try use_ncs_level=false)"}
+    info["candidate"] = _set_working(ctx.deps, hz, "dip", ("dip", params), starter=True)
+    ctx.deps.state["working_params"].update({"method": "dip_lsq"})
+    return ctx.deps.record("dip_guided_horizon", {"polarity": polarity, **params}, info)
 
 
 async def compare_candidates(ctx: RunContext[RunContext_]) -> dict:
-    """Score every candidate horizon of this task with input-only checks (lower is better unless noted):
-    well_mae_ms, off_fault_jumps (fraction of picked traces), throw_mismatch (fraction of reliable fault
-    crossings), event_amp (mean amplitude of the chosen polarity at the picks, ×RMS, higher = brighter),
-    coverage, ncs_disagree (fraction of picks > 40 ms from a confident NCS boundary; only after
-    ncs_level_check has run)."""
+    """Score every candidate horizon of this task with input-only checks: well_mae_ms, off_fault_jumps
+    (fraction of picked traces), throw_mismatch (fraction of reliable fault crossings), event_amp (mean
+    amplitude of the chosen polarity at the picks, ×RMS), coverage, ncs_disagree (fraction of picks > 40 ms
+    from a confident NCS boundary; after the NCS model has been used), dip_misfit_ms / dip_misfit_frac
+    (how well the picks follow the reflector dip). Also the chain of steps behind each candidate.
+    These checks can disagree and can mislead (see the playbook); prefer holdout_wells_check and
+    method_agreement_check to judge accuracy."""
+    from strata.tools import dip as DP
     from strata.tools import faults as F
+    from strata.tools import workflow as WF
     cands = ctx.deps.state.get("candidates", {})
     if not cands:
         return {"error": "no candidates yet"}
     cube = ctx.deps.cube
     _, ties = _tie_points(ctx.deps)
-    fm = ctx.deps.state.get("fault_mask")
-    pol = ctx.deps.state.get("working_params", {}).get("polarity", "trough")
-    sign = 1 if pol == "peak" else -1
-    ncs = ctx.deps.state.get("ncs")
+    env = _env(ctx.deps)
+    fm = env.fault
+    sign = 1 if env.polarity == "peak" else -1
+    wells = _wells(ctx.deps)
+    key = ("ncs", tuple(sorted(w[0] for w in wells)))
+    ncs = env.cache.get(key)
+    con = WF.contrast_full(env, ncs) if ncs is not None else None
     rows = {}
-    for key, hz in cands.items():
+    for k, hz in cands.items():
         t = hz.twt; ok = np.isfinite(t)
         ii, jj = np.nonzero(ok)
         kk = np.clip(np.round((t[ok] - cube.t0) / cube.dt).astype(int), 0, cube.shape[2] - 1)
+        dc = DP.dip_conformity(cube, t, fm)
         r = {"well_mae_ms": round(float(H.well_residuals(cube, hz, ties).residual_ms.abs().mean()), 2),
              "event_amp": round(float(np.mean(sign * cube.data[ii, jj, kk]) / cube.rms), 3),
-             "coverage": round(float(ok.mean()), 3)}
-        from strata.tools import dip as DP
-        dc = DP.dip_conformity(cube, t, fm)
-        r["dip_misfit_ms"] = dc["dip_misfit_mean_ms"]
-        r["dip_misfit_frac"] = dc["dip_misfit_frac_over_tol"]
+             "coverage": round(float(ok.mean()), 3),
+             "dip_misfit_ms": dc["dip_misfit_mean_ms"], "dip_misfit_frac": dc["dip_misfit_frac_over_tol"],
+             "chain": [s for s, _ in ctx.deps.state.get("chains", {}).get(k, [])]}
         if fm is not None:
             j = F.horizon_vs_faults(t, fm)
             r["off_fault_jumps"] = round(j["jumps_off_faults"] / max(int(ok.sum()), 1), 4)
             r["throw_mismatch"] = F.throw_consistency(cube, t, fm)["mismatch_frac"]
         if ncs is not None:
-            co = ncs["coords"]
-            ia = np.clip(np.searchsorted(co["il_sample"], np.arange(cube.shape[0])), 0, len(co["il_sample"]) - 1)
-            ja = np.clip(np.searchsorted(co["xl_sample"], np.arange(cube.shape[1])), 0, len(co["xl_sample"]) - 1)
-            con = ncs["contrast"][np.ix_(ia, ja)]
             d = np.abs(t - ncs["surface"])
             r["ncs_disagree"] = round(float(np.mean((d > 40) & (con >= 0.5) & ok) / max(ok.mean(), 1e-9)), 4)
-        rows[key] = r
+        if k in ctx.deps.state.get("holdout", {}):
+            r["holdout_mae_ms"] = ctx.deps.state["holdout"][k]
+        rows[k] = r
     return ctx.deps.record("compare_candidates", {}, {"working": ctx.deps.state.get("working_label"),
                                                      "candidates": rows})
+
+
+async def holdout_wells_check(ctx: RunContext[RunContext_], candidate: str | None = None, folds: int = 3) -> dict:
+    """ACCURACY ESTIMATE from wells the workflow did not see. Re-runs the whole chain of steps behind a
+    candidate (default: the working one) `folds` times, each time hiding a group of wells (sidetracks from
+    one slot are hidden together), and measures |pick − tie| at the hidden wells after EVERY step, next to
+    plain interpolation between the remaining wells. Shows which steps actually help at unseen wells.
+    Slow: the chain is re-run per fold (minutes). Only tests near wells, not far from them."""
+    from strata.tools import workflow as WF
+    key = candidate or ctx.deps.state.get("working_label")
+    chain = ctx.deps.state.get("chains", {}).get(key)
+    if not chain:
+        return {"error": f"no replayable chain for candidate {key!r}"}
+    rep = WF.holdout_wells(_env(ctx.deps), _wells(ctx.deps), chain, folds=folds)
+    ctx.deps.state.setdefault("holdout", {})[key] = rep["after_each_step"][-1]["mae_ms"]
+    rep["candidate"] = key
+    rep["chain"] = [s for s, _ in chain]
+    rep.pop("per_well", None)
+    return ctx.deps.record("holdout_wells_check", {"candidate": key, "folds": folds}, rep)
+
+
+async def method_agreement_check(ctx: RunContext[RunContext_]) -> dict:
+    """Where do INDEPENDENT estimates agree? Builds three estimates — Viterbi tracking from the wells,
+    the dip-following surface with the NCS level, and the NCS package boundary — and reports how much of
+    the working horizon is backed by at least two of them (within 15 ms), how much by none, and the
+    largest regions where the methods disagree by > 25 ms (with the median time of each method there).
+    Agreement = likely right; disagreement regions = where to look harder or choose a method."""
+    from strata.tools import workflow as WF
+    hz = ctx.deps.state.get("working_horizon")
+    if hz is None:
+        return {"error": "nothing to compare yet"}
+    env = _env(ctx.deps)
+    cands = ctx.deps.state.get("candidates", {})
+    chains = ctx.deps.state.get("chains", {})
+    track = next((cands[k] for k in reversed(list(cands)) if chains.get(k) == [chains[k][0]] and chains[k][0][0] == "track"
+                  and chains[k][0][1].get("method") == "viterbi"), None)
+    rep, maps = WF.method_agreement(env, _wells(ctx.deps), hz, track=track)
+    ctx.deps.state["agreement_maps"] = maps
+    rep["working"] = ctx.deps.state.get("working_label")
+    return ctx.deps.record("method_agreement_check", {}, rep)
 
 
 async def select_candidate(ctx: RunContext[RunContext_], candidate: str) -> dict:
@@ -315,12 +356,14 @@ async def select_candidate(ctx: RunContext[RunContext_], candidate: str) -> dict
 
 async def fill_and_smooth(ctx: RunContext[RunContext_], max_gap_traces: int = 4, smooth: int = 0) -> dict:
     """Fill holes up to max_gap_traces wide in the working horizon; optional median smoothing (odd size)."""
+    from strata.tools import workflow as WF
     hz = ctx.deps.state.get("working_horizon")
     if hz is None:
         return {"error": "track first"}
-    hz2, rep = H.fill_gaps(hz, max_gap_traces, smooth)
-    rep["candidate"] = _set_working(ctx.deps, hz2, "fill")
-    return ctx.deps.record("fill_and_smooth", {"max_gap_traces": max_gap_traces, "smooth": smooth}, rep)
+    params = {"max_gap_traces": max_gap_traces, "smooth": smooth}
+    hz2, rep = WF.step_fill(_env(ctx.deps), _wells(ctx.deps), hz, **params)
+    rep["candidate"] = _set_working(ctx.deps, hz2, "fill", ("fill", params))
+    return ctx.deps.record("fill_and_smooth", params, rep)
 
 
 async def publish_horizon(ctx: RunContext[RunContext_], name: str, summary: str) -> dict:
@@ -369,5 +412,6 @@ def build(model_spec: str, name: str, rework: bool = False) -> Agent:
                         "params": {}})
     return Agent(make_model(model_spec, p), deps_type=RunContext_, output_type=HorizonResult,
                  instructions=INSTRUCTIONS, tools=[seed_report, track_horizon, dip_guided_horizon, repair_deviations, ncs_level_check, compare_candidates,
-                        select_candidate, fill_and_smooth, publish_horizon],
+                        holdout_wells_check, method_agreement_check, select_candidate, fill_and_smooth,
+                        publish_horizon],
                  name="horizon_agent")

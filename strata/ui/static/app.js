@@ -14,7 +14,7 @@ async function init() {
   $('brief').value = S.cfg.default_brief;
   $('model').innerHTML = S.cfg.models.map(m => `<option ${m === S.cfg.default_model ? 'selected' : ''}>${m}</option>`).join('');
   $('autonomy').innerHTML = S.cfg.autonomy.map(a => `<option ${a === 'gates_only' ? 'selected' : ''}>${a}</option>`).join('');
-  if (!S.cfg.anthropic_key) $('model').title = 'ANTHROPIC_API_KEY is not set: only "scripted" will run';
+  if (!S.cfg.anthropic_key) $('model').title = 'ANTHROPIC_API_KEY is not set: only the "reference" workflow (no LLM) will run';
   $('runBtn').onclick = startRun;
   $('runSelect').onchange = () => openRun($('runSelect').value);
   document.querySelectorAll('#viewSeg button').forEach(b => b.onclick = () => setView(b.dataset.v));

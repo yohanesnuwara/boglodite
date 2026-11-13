@@ -1,0 +1,679 @@
+{
+  "candidate": "/home/yohanuwa/projects/boglodite/outputs/norne_scores/selftest/j_reversed_order",
+  "manifest": {},
+  "composite": 0.9276,
+  "stages_scored": [
+    "S2",
+    "S3",
+    "S4",
+    "S5",
+    "S6",
+    "S7"
+  ],
+  "stage_coverage": 1.0,
+  "stages": {
+    "S2": {
+      "score": 1.0,
+      "outcome": "correct",
+      "overt": null,
+      "metrics": {
+        "median_sym_dist_m": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 100.0,
+          "score": 1.0,
+          "primary": true
+        },
+        "recall@100m": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": true
+        },
+        "precision@100m": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": true
+        },
+        "hd95_m": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 100.0,
+          "score": 1.0,
+          "primary": false
+        },
+        "faults_matched_frac": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": false
+        },
+        "fault_count_err": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 10,
+          "score": 1.0,
+          "primary": false
+        }
+      },
+      "info": {
+        "ref_faults": 62,
+        "cand_faults": 62,
+        "cand_points_in_reservoir": 32447
+      }
+    },
+    "S3": {
+      "score": 1.0,
+      "outcome": "correct",
+      "overt": null,
+      "metrics": {
+        "median_abs_ms": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 15.0,
+          "score": 1.0,
+          "primary": true
+        },
+        "coverage": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": true
+        },
+        "p90_abs_ms": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 45.0,
+          "score": 1.0,
+          "primary": false
+        }
+      },
+      "info": {
+        "ref_nodes": 101901,
+        "covered_nodes": 101901
+      }
+    },
+    "S4": {
+      "score": 0.5175,
+      "outcome": "correct",
+      "overt": null,
+      "metrics": {
+        "blind_pick_rms_m": {
+          "value": 6.5868,
+          "error": 6.5868,
+          "tau": 10.0,
+          "score": 0.5175,
+          "primary": true
+        },
+        "blind_pick_coverage": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": false
+        }
+      },
+      "info": {
+        "per_surface": {
+          "Garn top": {
+            "n": 8,
+            "rms_m": 7.2
+          },
+          "Not top": {
+            "n": 8,
+            "rms_m": 5.37
+          },
+          "Ile top": {
+            "n": 7,
+            "rms_m": 5.07
+          },
+          "Tofte top": {
+            "n": 3,
+            "rms_m": 2.64
+          },
+          "Tilje top": {
+            "n": 3,
+            "rms_m": 2.9
+          },
+          "Tilje base": {
+            "n": 3,
+            "rms_m": 13.13
+          }
+        },
+        "n_picks": 32,
+        "picks": [
+          {
+            "surface": "Garn top",
+            "well": "B-2H",
+            "pick": 2554.79,
+            "residual": -0.84
+          },
+          {
+            "surface": "Garn top",
+            "well": "D-3AH",
+            "pick": 2542.59,
+            "residual": 7.1
+          },
+          {
+            "surface": "Garn top",
+            "well": "D-3BY1HT2",
+            "pick": 2537.0,
+            "residual": 9.93
+          },
+          {
+            "surface": "Garn top",
+            "well": "D-3BY2H",
+            "pick": 2529.55,
+            "residual": 14.45
+          },
+          {
+            "surface": "Garn top",
+            "well": "D-3H",
+            "pick": 2543.31,
+            "residual": 5.51
+          },
+          {
+            "surface": "Garn top",
+            "well": "D-4AH",
+            "pick": 2563.85,
+            "residual": -0.35
+          },
+          {
+            "surface": "Garn top",
+            "well": "D-4H",
+            "pick": 2558.38,
+            "residual": -3.25
+          },
+          {
+            "surface": "Garn top",
+            "well": "F-3H",
+            "pick": 2557.97,
+            "residual": 3.89
+          },
+          {
+            "surface": "Not top",
+            "well": "B-2H",
+            "pick": 2589.39,
+            "residual": 1.8
+          },
+          {
+            "surface": "Not top",
+            "well": "D-3AH",
+            "pick": 2559.79,
+            "residual": -2.78
+          },
+          {
+            "surface": "Not top",
+            "well": "D-3BY1HT2",
+            "pick": 2557.51,
+            "residual": 2.28
+          },
+          {
+            "surface": "Not top",
+            "well": "D-3BY2H",
+            "pick": 2593.44,
+            "residual": -9.11
+          },
+          {
+            "surface": "Not top",
+            "well": "D-3BY2H",
+            "pick": 2554.92,
+            "residual": 10.27
+          },
+          {
+            "surface": "Not top",
+            "well": "D-3H",
+            "pick": 2553.96,
+            "residual": 2.47
+          },
+          {
+            "surface": "Not top",
+            "well": "D-4H",
+            "pick": 2591.13,
+            "residual": -2.45
+          },
+          {
+            "surface": "Not top",
+            "well": "F-3H",
+            "pick": 2595.75,
+            "residual": 3.75
+          },
+          {
+            "surface": "Ile top",
+            "well": "B-2H",
+            "pick": 2598.59,
+            "residual": 1.69
+          },
+          {
+            "surface": "Ile top",
+            "well": "D-3AH",
+            "pick": 2563.13,
+            "residual": 2.01
+          },
+          {
+            "surface": "Ile top",
+            "well": "D-3BY1HT2",
+            "pick": 2566.58,
+            "residual": 4.3
+          },
+          {
+            "surface": "Ile top",
+            "well": "D-3BY2H",
+            "pick": 2563.45,
+            "residual": 11.52
+          },
+          {
+            "surface": "Ile top",
+            "well": "D-3H",
+            "pick": 2563.06,
+            "residual": 1.85
+          },
+          {
+            "surface": "Ile top",
+            "well": "D-4H",
+            "pick": 2598.95,
+            "residual": -1.94
+          },
+          {
+            "surface": "Ile top",
+            "well": "F-3H",
+            "pick": 2601.84,
+            "residual": 3.81
+          },
+          {
+            "surface": "Tofte top",
+            "well": "D-3H",
+            "pick": 2607.1,
+            "residual": 0.71
+          },
+          {
+            "surface": "Tofte top",
+            "well": "D-4H",
+            "pick": 2646.85,
+            "residual": -0.66
+          },
+          {
+            "surface": "Tofte top",
+            "well": "F-3H",
+            "pick": 2645.84,
+            "residual": 4.47
+          },
+          {
+            "surface": "Tilje top",
+            "well": "D-3H",
+            "pick": 2652.18,
+            "residual": 2.93
+          },
+          {
+            "surface": "Tilje top",
+            "well": "D-4H",
+            "pick": 2702.8,
+            "residual": -0.35
+          },
+          {
+            "surface": "Tilje top",
+            "well": "F-3H",
+            "pick": 2697.74,
+            "residual": 4.06
+          },
+          {
+            "surface": "Tilje base",
+            "well": "D-3H",
+            "pick": 2723.63,
+            "residual": 21.91
+          },
+          {
+            "surface": "Tilje base",
+            "well": "D-4H",
+            "pick": 2801.85,
+            "residual": -3.0
+          },
+          {
+            "surface": "Tilje base",
+            "well": "F-3H",
+            "pick": 2800.97,
+            "residual": 5.31
+          }
+        ],
+        "note": "Garn-top picks have an open TVD issue (spec \u00a711)"
+      }
+    },
+    "S5": {
+      "score": 1.0,
+      "outcome": "correct",
+      "overt": null,
+      "metrics": {
+        "zone_top_rms_m": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 10.0,
+          "score": 1.0,
+          "primary": true
+        },
+        "brv_rel_err": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.05,
+          "score": 1.0,
+          "primary": true
+        },
+        "fault_face_recall@100m": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": true
+        },
+        "fault_face_precision@100m": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": true
+        },
+        "valid_cell_frac": {
+          "value": 1.0,
+          "error": 0.0,
+          "tau": 0.25,
+          "score": 1.0,
+          "primary": true
+        },
+        "zone_top_coverage": {
+          "value": 0.9997,
+          "error": 0.0003,
+          "tau": 0.25,
+          "score": 0.9988,
+          "primary": false
+        }
+      },
+      "info": {
+        "zone_top_rms_m": {
+          "Garn top": 0.0,
+          "Not top": 0.0,
+          "Ile top": 0.0,
+          "Tofte top": 0.0,
+          "Tilje top": 0.0,
+          "Tilje base": 0.0
+        },
+        "isochore_rms_m": {
+          "Garn": 0.0,
+          "Ile": 0.0,
+          "Tofte": 0.0,
+          "Tilje": 0.0
+        },
+        "brv_1e6_m3": {
+          "candidate": {
+            "Garn": 520.76,
+            "Ile": 618.45,
+            "Tofte": 901.18,
+            "Tilje": 1342.3
+          },
+          "reference": {
+            "Garn": 520.76,
+            "Ile": 618.45,
+            "Tofte": 901.18,
+            "Tilje": 1342.3
+          }
+        },
+        "validity": {
+          "bad_cell_frac": 0.0,
+          "inverted_pillars": 0,
+          "active_cells": 44927
+        },
+        "fault_faces": {
+          "candidate": 14442,
+          "reference": 14442
+        }
+      }
+    },
+    "S6": {
+      "score": 1.0,
+      "outcome": "correct",
+      "overt": null,
+      "metrics": {
+        "poro_wasserstein_mean": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.02,
+          "score": 1.0,
+          "primary": true
+        },
+        "ntg_wasserstein_mean": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.05,
+          "score": 1.0,
+          "primary": true
+        },
+        "logk_wasserstein_mean": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.3,
+          "score": 1.0,
+          "primary": true
+        }
+      },
+      "info": {
+        "per_zone": {
+          "Garn": {
+            "poro": 0.0,
+            "ntg": 0.0,
+            "logk": 0.0
+          },
+          "Ile": {
+            "poro": 0.0,
+            "ntg": 0.0,
+            "logk": 0.0
+          },
+          "Tofte": {
+            "poro": 0.0,
+            "ntg": 0.0,
+            "logk": 0.0
+          },
+          "Tilje": {
+            "poro": 0.0,
+            "ntg": 0.0,
+            "logk": 0.0
+          }
+        },
+        "note": "property tolerances are provisional (spec \u00a75.1)"
+      }
+    },
+    "S7": {
+      "score": 1.0,
+      "outcome": "correct",
+      "overt": null,
+      "metrics": {
+        "stoiip_rel_err": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.05,
+          "score": 1.0,
+          "primary": true
+        },
+        "hcpv_oil_wmae": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.05,
+          "score": 1.0,
+          "primary": true
+        },
+        "pv_rel_err": {
+          "value": 0.0,
+          "error": 0.0,
+          "tau": 0.05,
+          "score": 1.0,
+          "primary": false
+        }
+      },
+      "info": {
+        "stoiip_1e6_sm3": {
+          "candidate": 156.31,
+          "reference": 156.31
+        },
+        "table": [
+          {
+            "zone": "Garn",
+            "eqlnum": 1,
+            "brv_ref": 317.652,
+            "nrv_ref": 234.153,
+            "pv_ref": 59.535,
+            "hcpv_oil_ref": 11.384,
+            "hcpv_gas_ref": 33.064,
+            "stoiip_ref": 8.466,
+            "brv_c": 317.652,
+            "nrv_c": 234.153,
+            "pv_c": 59.535,
+            "hcpv_oil_c": 11.384,
+            "hcpv_gas_c": 33.064,
+            "stoiip_c": 8.466
+          },
+          {
+            "zone": "Garn",
+            "eqlnum": 2,
+            "brv_ref": 75.803,
+            "nrv_ref": 61.132,
+            "pv_ref": 14.793,
+            "hcpv_oil_ref": 6.78,
+            "hcpv_gas_ref": 0.128,
+            "stoiip_ref": 5.068,
+            "brv_c": 75.803,
+            "nrv_c": 61.132,
+            "pv_c": 14.793,
+            "hcpv_oil_c": 6.78,
+            "hcpv_gas_c": 0.128,
+            "stoiip_c": 5.068
+          },
+          {
+            "zone": "Garn",
+            "eqlnum": 3,
+            "brv_ref": 127.303,
+            "nrv_ref": 90.594,
+            "pv_ref": 22.551,
+            "hcpv_oil_ref": 2.991,
+            "hcpv_gas_ref": 4.879,
+            "stoiip_ref": 2.222,
+            "brv_c": 127.303,
+            "nrv_c": 90.594,
+            "pv_c": 22.551,
+            "hcpv_oil_c": 2.991,
+            "hcpv_gas_c": 4.879,
+            "stoiip_c": 2.222
+          },
+          {
+            "zone": "Ile",
+            "eqlnum": 4,
+            "brv_ref": 42.807,
+            "nrv_ref": 38.541,
+            "pv_ref": 9.406,
+            "hcpv_oil_ref": 0.0,
+            "hcpv_gas_ref": 0.0,
+            "stoiip_ref": 0.0,
+            "brv_c": 42.807,
+            "nrv_c": 38.541,
+            "pv_c": 9.406,
+            "hcpv_oil_c": 0.0,
+            "hcpv_gas_c": 0.0,
+            "stoiip_c": 0.0
+          },
+          {
+            "zone": "Ile",
+            "eqlnum": 5,
+            "brv_ref": 575.644,
+            "nrv_ref": 536.073,
+            "pv_ref": 134.055,
+            "hcpv_oil_ref": 83.836,
+            "hcpv_gas_ref": 8.124,
+            "stoiip_ref": 62.333,
+            "brv_c": 575.644,
+            "nrv_c": 536.073,
+            "pv_c": 134.055,
+            "hcpv_oil_c": 83.836,
+            "hcpv_gas_c": 8.124,
+            "stoiip_c": 62.333
+          },
+          {
+            "zone": "Tofte",
+            "eqlnum": 4,
+            "brv_ref": 149.689,
+            "nrv_ref": 128.179,
+            "pv_ref": 31.847,
+            "hcpv_oil_ref": 0.0,
+            "hcpv_gas_ref": 0.0,
+            "stoiip_ref": 0.0,
+            "brv_c": 149.689,
+            "nrv_c": 128.179,
+            "pv_c": 31.847,
+            "hcpv_oil_c": 0.0,
+            "hcpv_gas_c": 0.0,
+            "stoiip_c": 0.0
+          },
+          {
+            "zone": "Tofte",
+            "eqlnum": 5,
+            "brv_ref": 751.493,
+            "nrv_ref": 720.518,
+            "pv_ref": 187.995,
+            "hcpv_oil_ref": 95.518,
+            "hcpv_gas_ref": 0.0,
+            "stoiip_ref": 71.019,
+            "brv_c": 751.493,
+            "nrv_c": 720.518,
+            "pv_c": 187.995,
+            "hcpv_oil_c": 95.518,
+            "hcpv_gas_c": 0.0,
+            "stoiip_c": 71.019
+          },
+          {
+            "zone": "Tilje",
+            "eqlnum": 4,
+            "brv_ref": 52.87,
+            "nrv_ref": 42.975,
+            "pv_ref": 10.397,
+            "hcpv_oil_ref": 0.0,
+            "hcpv_gas_ref": 0.0,
+            "stoiip_ref": 0.0,
+            "brv_c": 52.87,
+            "nrv_c": 42.975,
+            "pv_c": 10.397,
+            "hcpv_oil_c": 0.0,
+            "hcpv_gas_c": 0.0,
+            "stoiip_c": 0.0
+          },
+          {
+            "zone": "Tilje",
+            "eqlnum": 5,
+            "brv_ref": 1289.427,
+            "nrv_ref": 878.828,
+            "pv_ref": 204.016,
+            "hcpv_oil_ref": 9.68,
+            "hcpv_gas_ref": 0.0,
+            "stoiip_ref": 7.197,
+            "brv_c": 1289.427,
+            "nrv_c": 878.828,
+            "pv_c": 204.016,
+            "hcpv_oil_c": 9.68,
+            "hcpv_gas_c": 0.0,
+            "stoiip_c": 7.197
+          }
+        ]
+      }
+    }
+  },
+  "tau": {
+    "depth_m": 10.0,
+    "fault_m": 100.0,
+    "time_ms": 15.0,
+    "vol_rel": 0.05,
+    "frac": 0.25,
+    "poro": 0.02,
+    "ntg": 0.05,
+    "logk": 0.3
+  },
+  "seconds": 20.1
+}

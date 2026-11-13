@@ -1,0 +1,30 @@
+[
+ {
+  "case": "trough, shift -11.5, guide \u00b115 ms",
+  "time_mae": 21.7,
+  "coverage": 0.951,
+  "bias": 4.4,
+  "jumps": 6228
+ },
+ {
+  "case": "trough, shift -11.5, guide \u00b120 ms",
+  "time_mae": 22.3,
+  "coverage": 0.978,
+  "bias": 2.9,
+  "jumps": 15792
+ },
+ {
+  "case": "trough, shift -11.5, guide \u00b130 ms",
+  "time_mae": 22.7,
+  "coverage": 0.982,
+  "bias": 4.4,
+  "jumps": 18048
+ },
+ {
+  "case": "trough, shift -11.5, guide \u00b145 ms",
+  "time_mae": 24.0,
+  "coverage": 0.983,
+  "bias": 3.6,
+  "jumps": 18248
+ }
+]
